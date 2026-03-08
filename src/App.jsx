@@ -339,6 +339,146 @@ function PageCameraPermission({ exercise, plan, onGranted, onBack }) {
   );
 }
 
+// [หน้า 5.5] หน้า Preview กล้อง + AI Skeleton (แสดงภาพกล้องพร้อม AI ตรวจจับท่าก่อนเริ่มออกกำลัง)
+function PageCameraPreview({ exercise, plan, mediapipeReady, initialStream, onStart, onBack }) {
+  const videoRef = useRef(null), canvasRef = useRef(null), poseRef = useRef(null);
+  const streamRef = useRef(initialStream || null), rafRef = useRef(null);
+  const [poseDetected, setPoseDetected] = useState(false);
+  const [cameraErr, setCameraErr] = useState(null);
+  const [jointCount, setJointCount] = useState(0);
+  const exPlan = plan[exercise];
+
+  useEffect(() => {
+    if (!mediapipeReady) return;
+    let active = true;
+    const init = async () => {
+      try {
+        let stream = streamRef.current;
+        if (!stream) stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "user" } });
+        if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = stream;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        const p = new window.Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}` });
+        p.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.55, minTrackingConfidence: 0.55 });
+        p.onResults((results) => {
+          if (!active) return;
+          const canvas = canvasRef.current, video = videoRef.current;
+          if (!canvas || !video) return;
+          const ctx2d = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
+          // mirror the frame
+          ctx2d.save(); ctx2d.translate(W, 0); ctx2d.scale(-1, 1); ctx2d.drawImage(results.image, 0, 0, W, H); ctx2d.restore();
+          // dark vignette overlay
+          const grad = ctx2d.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.85);
+          grad.addColorStop(0, "rgba(0,0,0,0)"); grad.addColorStop(1, "rgba(6,8,16,0.55)");
+          ctx2d.fillStyle = grad; ctx2d.fillRect(0, 0, W, H);
+          if (results.poseLandmarks) {
+            setPoseDetected(true);
+            setJointCount(results.poseLandmarks.length);
+            // Draw connections
+            if (window.drawConnectors && window.POSE_CONNECTIONS) {
+              window.drawConnectors(ctx2d, results.poseLandmarks, window.POSE_CONNECTIONS, { color: "#00ff8866", lineWidth: 2 });
+            }
+            // Draw landmarks with numbered circles (like the reference image)
+            results.poseLandmarks.forEach((lm, i) => {
+              const x = (1 - lm.x) * W, y = lm.y * H; // mirrored
+              const confidence = lm.visibility || 0;
+              if (confidence < 0.3) return;
+              // outer glow ring
+              ctx2d.beginPath(); ctx2d.arc(x, y, 10, 0, Math.PI * 2);
+              ctx2d.strokeStyle = `rgba(0,255,136,${confidence * 0.35})`; ctx2d.lineWidth = 6; ctx2d.stroke();
+              // inner dot
+              ctx2d.beginPath(); ctx2d.arc(x, y, 4, 0, Math.PI * 2);
+              ctx2d.fillStyle = `rgba(0,255,136,${confidence})`; ctx2d.fill();
+              // number label (only key joints)
+              const keyJoints = [11,12,13,14,15,16,23,24,25,26,27,28];
+              if (keyJoints.includes(i)) {
+                ctx2d.fillStyle = "rgba(0,255,136,0.9)"; ctx2d.font = "bold 10px 'Space Mono',monospace";
+                ctx2d.fillText(i, x + 7, y - 7);
+              }
+            });
+          } else {
+            setPoseDetected(false);
+          }
+          // Top HUD bar
+          ctx2d.fillStyle = "rgba(6,8,16,0.78)"; ctx2d.fillRect(0, 0, W, 64);
+          ctx2d.fillStyle = "#00ff88"; ctx2d.font = "bold 12px 'Space Mono',monospace";
+          ctx2d.fillText("◆ AI BODY SCAN ACTIVE", 20, 26);
+          ctx2d.fillStyle = results.poseLandmarks ? "#00ff88" : "#ff9800";
+          ctx2d.font = "11px 'Space Mono',monospace";
+          ctx2d.fillText(results.poseLandmarks ? `✓ POSE DETECTED — ${results.poseLandmarks.length} JOINTS` : "⟳ SCANNING...", 20, 50);
+          // Exercise label top-right
+          ctx2d.fillStyle = "#ffd700"; ctx2d.font = "bold 12px 'Space Mono',monospace";
+          const exLabel = exercise === "pushup" ? "PUSH-UP" : "SQUAT";
+          ctx2d.fillText(exLabel, W - ctx2d.measureText(exLabel).width - 20, 26);
+          ctx2d.fillStyle = "#ffffff44"; ctx2d.font = "10px 'Space Mono',monospace";
+          ctx2d.fillText(`${exPlan.sets} SETS × ${exPlan.reps} REPS`, W - ctx2d.measureText(`${exPlan.sets} SETS × ${exPlan.reps} REPS`).width - 20, 50);
+          // Bottom HUD
+          ctx2d.fillStyle = "rgba(6,8,16,0.78)"; ctx2d.fillRect(0, H - 56, W, 56);
+          ctx2d.strokeStyle = "#00ff8833"; ctx2d.lineWidth = 1;
+          ctx2d.beginPath(); ctx2d.moveTo(0, H - 56); ctx2d.lineTo(W, H-56); ctx2d.stroke();
+          ctx2d.fillStyle = "#ffffff55"; ctx2d.font = "11px 'Space Mono',monospace";
+          ctx2d.fillText("// ตั้งตัวให้ AI เห็นร่างกายทั้งหมด แล้วกด 'เริ่มออกกำลัง'", 20, H - 22);
+        });
+        await p.initialize();
+        poseRef.current = p;
+        const loop = async () => {
+          if (!active) return;
+          if (poseRef.current && videoRef.current?.readyState >= 2) await poseRef.current.send({ image: videoRef.current });
+          rafRef.current = requestAnimationFrame(loop);
+        };
+        rafRef.current = requestAnimationFrame(loop);
+      } catch (e) { setCameraErr("ไม่สามารถเข้าถึงกล้องได้ กรุณาลองใหม่"); }
+    };
+    init();
+    return () => { active = false; if (rafRef.current) cancelAnimationFrame(rafRef.current); poseRef.current = null; };
+  }, [mediapipeReady]);
+
+  return (
+    <div style={{ position: "relative", width: "100%", minHeight: "100vh", background: "#060810", display: "flex", flexDirection: "column" }}>
+      <video ref={videoRef} style={{ position: "absolute", opacity: 0, width: "1px", height: "1px" }} playsInline muted />
+      {/* Canvas: live camera + AI overlay */}
+      <div style={{ position: "relative", flex: 1 }}>
+        <canvas ref={canvasRef} width={1280} height={720} style={{ width: "100%", height: "auto", display: "block", maxHeight: "calc(100vh - 130px)", background: "#000" }} />
+        {/* MediaPipe loading */}
+        {!mediapipeReady && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(6,8,16,0.92)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px" }}>
+            <div style={{ width: "48px", height: "48px", border: "3px solid #00ff8833", borderTop: "3px solid #00ff88", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+            <p style={{ fontFamily: "'Space Mono',monospace", color: "#00ff88", fontSize: "12px", letterSpacing: "2px" }}>กำลังโหลด AI...</p>
+          </div>
+        )}
+        {cameraErr && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(6,8,16,0.95)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", flexDirection: "column", gap: "16px" }}>
+            <div style={{ fontSize: "48px" }}>📷</div>
+            <p style={{ fontFamily: "'Space Mono',monospace", color: "#ff4466", fontSize: "13px", textAlign: "center" }}>{cameraErr}</p>
+          </div>
+        )}
+        {/* Pose status badge */}
+        <div style={{ position: "absolute", top: "72px", right: "16px", display: "flex", alignItems: "center", gap: "8px", background: "rgba(6,8,16,0.7)", border: `1px solid ${poseDetected ? "#00ff8866" : "#ff980066"}`, borderRadius: "20px", padding: "6px 14px" }}>
+          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: poseDetected ? "#00ff88" : "#ff9800", boxShadow: poseDetected ? "0 0 8px #00ff88" : "0 0 8px #ff9800", animation: "pulse 1.5s ease-in-out infinite" }} />
+          <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: poseDetected ? "#00ff88" : "#ff9800", letterSpacing: "1px" }}>
+            {poseDetected ? "AI TRACKING" : "SCANNING"}
+          </span>
+        </div>
+      </div>
+      {/* Bottom action bar */}
+      <div style={{ background: "rgba(6,8,16,0.95)", borderTop: "1px solid #00ff8822", padding: "16px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
+        <button onClick={onBack} style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44", background: "none", border: "1px solid #ffffff22", borderRadius: "4px", padding: "10px 18px", cursor: "pointer", letterSpacing: "1px", flexShrink: 0 }}>← กลับ</button>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: poseDetected ? "#00ff8899" : "#ff980099", letterSpacing: "2px", marginBottom: "4px" }}>
+            {poseDetected ? `✓ พบ ${jointCount} จุดข้อต่อ — พร้อมแล้ว!` : "⟳ ตั้งตัวให้ AI มองเห็นร่างกายทั้งหมด"}
+          </div>
+          <div style={{ height: "3px", background: "#0d1a0d", borderRadius: "2px", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: poseDetected ? "100%" : "40%", background: poseDetected ? "#00ff88" : "#ff9800", transition: "all 0.6s ease", boxShadow: poseDetected ? "0 0 8px #00ff88" : "none" }} />
+          </div>
+        </div>
+        <GlowButton onClick={onStart} style={{ flexShrink: 0, padding: "12px 24px" }}>⚡ เริ่มออกกำลัง</GlowButton>
+      </div>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+    </div>
+  );
+}
+
 // [หน้า 6] พระเอกของงานระบบจับภาพสดด้วย MediaPipe นำข้อมูลข้อต่อส่งกลับมาประมวลผลมุมและองศา
 function PageTracker({ exercise, plan, onFinish, mediapipeReady, initialStream }) {
   const videoRef = useRef(null), canvasRef = useRef(null), poseRef = useRef(null);
@@ -492,7 +632,7 @@ export default function AdaptableShadow() {
     finally { setLoading(false); }
   };
 
-  const hideHeader = page === "tracker" || page === "camera-permission";
+  const hideHeader = page === "tracker" || page === "camera-permission" || page === "camera-preview";
 
   return (
     <div style={{ minHeight: "100vh", background: "#060810", color: "#ffffff" }}>
@@ -523,7 +663,8 @@ export default function AdaptableShadow() {
         {page === "planning" && <PagePlanning />}
         {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setPage("tutorial"); }} onBack={() => setPage("context")} />}
         {page === "tutorial" && plan && <PageVideoTutorial exercise={exercise} onNext={() => { setCameraStream(null); setPage("camera-permission"); }} onBack={() => setPage("plan")} />}
-        {page === "camera-permission" && plan && <PageCameraPermission exercise={exercise} plan={plan} onGranted={stream => { setCameraStream(stream); setPage("tracker"); }} onBack={() => setPage("tutorial")} />}
+        {page === "camera-permission" && plan && <PageCameraPermission exercise={exercise} plan={plan} onGranted={stream => { setCameraStream(stream); setPage("camera-preview"); }} onBack={() => setPage("tutorial")} />}
+        {page === "camera-preview" && plan && <PageCameraPreview exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} onStart={() => setPage("tracker")} onBack={() => { stopCamera(); setPage("camera-permission"); }} />}
         {page === "tracker" && plan && <PageTracker exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} onFinish={() => { stopCamera(); setPage("plan"); }} />}
       </div>
     </div>
