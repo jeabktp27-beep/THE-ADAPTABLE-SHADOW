@@ -1,6 +1,35 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ============================================================================
+// 0. localStorage Helpers
+// ============================================================================
+const LS_STATS = "shadow_stats";
+const LS_CTX   = "shadow_ctx";
+const LS_HISTORY = "shadow_history";
+
+function loadLS(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function saveLS(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
+}
+
+// คำนวณแคลอรี่โดยประมาณ (MET x weight x time)
+function estimateCalories(exercise, totalReps, totalSec, weightKg) {
+  const met = { pushup: 3.8, squat: 5.0, plank: 3.0, lunge: 4.0 };
+  const m = met[exercise] || 4.0;
+  return Math.round(m * weightKg * (totalSec / 3600));
+}
+
+// บันทึกประวัติการออกกำลังลง localStorage
+function saveWorkoutSession(session) {
+  const history = loadLS(LS_HISTORY, []);
+  history.unshift({ ...session, id: Date.now() });
+  if (history.length > 50) history.length = 50; // เก็บไว้ 50 sessions
+  saveLS(LS_HISTORY, history);
+}
+
+// ============================================================================
 // 1. ระบบคณิตศาสตร์และตัวช่วย AI (Math & AI Helpers)
 // ============================================================================
 
@@ -24,14 +53,17 @@ async function fetchAIPlan(stats, ctx) {
   const prompt = `คุณคือ AI Personal Trainer ชื่อ "The Adaptable Shadow"
 ตอบกลับเป็น JSON เท่านั้น ไม่มีข้อความอื่นนอกจาก JSON บริสุทธิ์
 ข้อมูลผู้ใช้: น้ำหนัก ${stats.weight}kg, ส่วนสูง ${stats.height}cm, ไขมัน ${stats.bodyFat}%, BMI ${bmi}
+เป้าหมายของผู้ใช้วันนี้: "${stats.goal || 'ออกกำลังให้สุขภาพดี'}"
 บริบท: ตารางงาน="${ctx.calendar}", เหนื่อยล้า ${ctx.fatigue}/10, สถานที่="${ctx.location}", อากาศ="${ctx.weather}"
 กฎการตัดสิน:
 - เหนื่อยล้า>=7 หรือมีคำว่า ประชุม/ยุ่ง/งานเร่ง → mode="micro" (แค่ sets 2 reps 8-10)
 - เหนื่อยล้า 4-6 → mode="moderate" (sets 3 reps 12-15)
 - เหนื่อยล้า 1-3 และว่าง → mode="full" (sets 4 reps 20+)
 - ไขมัน<18% → reps+20% / ไขมัน>25% → reps-15%
+- เป้าหมายผู้ใช้: ปรับท่าออกกำลังและสารใน message/motivation ให้ตรงกับเป้าหมายนี้
+ท่าออกกำลัง: pushup(นับ reps), squat(นับ reps), plank(นับวินาที hold_sec), lunge(นับ reps)
 ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
-{"mode":"micro","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":2,"reps":10,"rest_sec":45},"squat":{"sets":2,"reps":12,"rest_sec":45},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
+{"mode":"micro","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":2,"reps":10,"rest_sec":45},"squat":{"sets":2,"reps":12,"rest_sec":45},"plank":{"sets":2,"hold_sec":30,"rest_sec":30},"lunge":{"sets":2,"reps":10,"rest_sec":45},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
 
   const res = await fetch("/api/plan", {
     method: "POST",
@@ -47,7 +79,9 @@ async function fetchAIPlan(stats, ctx) {
   const plan = JSON.parse(match[0]);
   // ใส่ค่า default ถ้า Gemini ตอบไม่ครบ
   if (!plan.pushup) plan.pushup = { sets: 2, reps: 10, rest_sec: 45 };
-  if (!plan.squat) plan.squat = { sets: 2, reps: 12, rest_sec: 45 };
+  if (!plan.squat)  plan.squat  = { sets: 2, reps: 12, rest_sec: 45 };
+  if (!plan.plank)  plan.plank  = { sets: 2, hold_sec: 30, rest_sec: 30 };
+  if (!plan.lunge)  plan.lunge  = { sets: 2, reps: 10, rest_sec: 45 };
   if (!plan.mode) plan.mode = "moderate";
   if (!plan.estimated_duration_min) plan.estimated_duration_min = 10;
   return plan;
@@ -124,6 +158,22 @@ function PageProfile({ stats, setStats, onNext }) {
           </div>
         </div>
       </div>
+
+      {/* เป้าหมายวันนี้ */}
+      <div style={{ marginTop: "24px", background: "#0d1a0d", border: "1px solid #ffd70033", borderRadius: "8px", padding: "24px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#ffd70099", marginBottom: "12px" }}>🎯  เป้าหมายวันนี้</div>
+        <textarea
+          value={stats.goal || ""}
+          onChange={e => setStats(s => ({ ...s, goal: e.target.value }))}
+          rows={3}
+          placeholder="บอก AI ว่าคุณต้องการอะไรวันนี้... เช่น: อยากลดพุง, เสริมแขน, อยากฝึกความอดทน"
+          style={{ width: "100%", background: "#060810", border: "1px solid #ffd70033", borderRadius: "4px", padding: "12px 14px", color: "#ffd700", fontFamily: "'Space Mono',monospace", fontSize: "12px", outline: "none", boxSizing: "border-box", resize: "vertical", lineHeight: 1.7 }}
+        />
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff33", marginTop: "8px" }}>
+          AI จะนำเป้าหมายนี้ไปปรับแผนและคำพูดกระตุ้นใจให้ตรงกับคุณโดยเฉพาะ
+        </div>
+      </div>
+
       <div style={{ marginTop: "32px", textAlign: "right" }}><GlowButton onClick={onNext}>NEXT →</GlowButton></div>
     </div>
   );
@@ -183,7 +233,7 @@ function PagePlanning() {
 }
 
 // [หน้า 3] หน้าสรุปแผน พร้อมปุ่มเพิ่มลง Google Calendar และให้ผู้ใช้เริ่มออกกำลัง
-function PagePlan({ plan, onStart, onBack }) {
+function PagePlan({ plan, onStart, onBack, onHistory }) {
   const modeColors = { micro: "#ff9800", moderate: "#00bfff", full: "#00ff88" };
   const color = modeColors[plan.mode] || "#00ff88";
 
@@ -191,12 +241,19 @@ function PagePlan({ plan, onStart, onBack }) {
     const title = encodeURIComponent(`The Adaptable Shadow: ${plan.mode.toUpperCase()} WORKOUT`);
     const details = encodeURIComponent(`ตารางวันนี้:\n${plan.message}\nPush-up: ${plan.pushup.sets}x${plan.pushup.reps}\nSquat: ${plan.squat.sets}x${plan.squat.reps}`);
     const now = new Date();
-    const startObj = new Date(now.getTime() + 10 * 60000); // +10 mins from now
+    const startObj = new Date(now.getTime() + 10 * 60000);
     const endObj = new Date(startObj.getTime() + (plan.estimated_duration_min * 60000));
     const start = startObj.toISOString().replace(/-|:|\.\d\d\d/g, "");
     const end = endObj.toISOString().replace(/-|:|\.\d\d\d/g, "");
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
   };
+
+  const exercises = [
+    { key: "pushup", label: "PUSH-UP", icon: "🤸", stat: `${plan.pushup.sets}×${plan.pushup.reps}`, sub: `REST ${plan.pushup.rest_sec}s` },
+    { key: "squat",  label: "SQUAT",   icon: "🦵", stat: `${plan.squat.sets}×${plan.squat.reps}`, sub: `REST ${plan.squat.rest_sec}s` },
+    { key: "plank",  label: "PLANK",   icon: "🧘", stat: `${plan.plank.sets}×${plan.plank.hold_sec}s`, sub: `REST ${plan.plank.rest_sec}s` },
+    { key: "lunge",  label: "LUNGE",   icon: "🏃", stat: `${plan.lunge.sets}×${plan.lunge.reps}`, sub: `REST ${plan.lunge.rest_sec}s` },
+  ];
 
   return (
     <div style={{ maxWidth: "520px", margin: "0 auto", padding: "40px 24px" }}>
@@ -204,7 +261,8 @@ function PagePlan({ plan, onStart, onBack }) {
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <ModeChip mode={plan.mode} />
           <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44", letterSpacing: "2px" }}>{plan.estimated_duration_min} MIN</span>
-          <a href={getCalendarUrl()} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", textDecoration: "none", fontFamily: "'Space Mono',monospace", fontSize: "10px", padding: "6px 14px", background: "#1a2a1a", color: "#00ff88", borderRadius: "4px", border: "1px solid #00ff8844", display: "inline-block" }}>+ ADD TO CALENDAR</a>
+          <a href={getCalendarUrl()} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", textDecoration: "none", fontFamily: "'Space Mono',monospace", fontSize: "10px", padding: "6px 14px", background: "#1a2a1a", color: "#00ff88", borderRadius: "4px", border: "1px solid #00ff8844", display: "inline-block" }}>+ CALENDAR</a>
+          <button onClick={onHistory} style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", padding: "6px 14px", background: "#1a1a2a", color: "#00bfff", borderRadius: "4px", border: "1px solid #00bfff44", cursor: "pointer" }}>📋 HISTORY</button>
         </div>
         <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,4vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.2, margin: 0 }}>YOUR PLAN<br /><span style={{ color }}>IS READY</span></h1>
       </div>
@@ -213,13 +271,13 @@ function PagePlan({ plan, onStart, onBack }) {
         <p style={{ color: "#ffffff", fontFamily: "'Space Mono',monospace", fontSize: "14px", lineHeight: 1.8, margin: 0 }}>{plan.message}</p>
         <p style={{ color: color, fontFamily: "'Space Mono',monospace", fontSize: "13px", lineHeight: 1.8, margin: "12px 0 0", fontStyle: "italic" }}>💪 {plan.motivation}</p>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-        {[["pushup", "PUSH-UP", "🤸"], ["squat", "SQUAT", "🦵"]].map(([key, label, icon]) => (
-          <div key={key} style={{ background: "#0d1a0d", border: `1px solid ${color}22`, borderRadius: "8px", padding: "20px" }}>
-            <div style={{ fontSize: "24px", marginBottom: "8px" }}>{icon}</div>
-            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: `${color}99`, marginBottom: "12px" }}>{label}</div>
-            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "32px", fontWeight: 700, color }}>{plan[key].sets}<span style={{ fontSize: "14px", color: "#ffffff66" }}>×</span>{plan[key].reps}</div>
-            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44", marginTop: "6px" }}>REST {plan[key].rest_sec}s</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
+        {exercises.map(({ key, label, icon, stat, sub }) => (
+          <div key={key} style={{ background: "#0d1a0d", border: `1px solid ${color}22`, borderRadius: "8px", padding: "16px" }}>
+            <div style={{ fontSize: "20px", marginBottom: "6px" }}>{icon}</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "2px", color: `${color}99`, marginBottom: "8px" }}>{label}</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "22px", fontWeight: 700, color }}>{stat}</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff44", marginTop: "4px" }}>{sub}</div>
           </div>
         ))}
       </div>
@@ -227,10 +285,12 @@ function PagePlan({ plan, onStart, onBack }) {
         <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffd70099", letterSpacing: "2px" }}>📌 FORM TIP: </span>
         <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffd700" }}>{plan.form_tip}</span>
       </div>
-      <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#ffffff44", marginBottom: "16px" }}>//  CHOOSE EXERCISE TO START</div>
-      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-        <GlowButton onClick={() => onStart("pushup")} style={{ flex: 1 }}>🤸 PUSH-UP</GlowButton>
-        <GlowButton onClick={() => onStart("squat")} variant="ghost" style={{ flex: 1 }}>🦵 SQUAT</GlowButton>
+      <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#ffffff44", marginBottom: "12px" }}>//  CHOOSE EXERCISE TO START</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+        <GlowButton onClick={() => onStart("pushup")}>🤸 PUSH-UP</GlowButton>
+        <GlowButton onClick={() => onStart("squat")} variant="ghost">🦵 SQUAT</GlowButton>
+        <GlowButton onClick={() => onStart("plank")} variant="ghost">🧘 PLANK</GlowButton>
+        <GlowButton onClick={() => onStart("lunge")} variant="ghost">🏃 LUNGE</GlowButton>
       </div>
       <div style={{ marginTop: "16px" }}><GlowButton variant="ghost" onClick={onBack} style={{ width: "100%", opacity: 0.5 }}>← REPLAN</GlowButton></div>
     </div>
@@ -239,11 +299,14 @@ function PagePlan({ plan, onStart, onBack }) {
 
 // [หน้า 4] หน้าแสดงวิดีโอตัวอย่างท่าที่ถูกต้องให้ผู้ใช้ดูก่อน
 function PageVideoTutorial({ exercise, onNext, onBack }) {
-  const vidSrc = exercise === "pushup"
-    ? "https://www.w3schools.com/html/mov_bbb.mp4" // Placeholder videos for now as real ones aren't available
-    : "https://www.w3schools.com/html/mov_bbb.mp4";
-
-  // Using direct placeholder videos. Recommend replacing these with real workout gifs/mp4 later.
+  const tips = {
+    pushup: ["หลังและลำตัวต้องตรงเป็นแผ่นกระดาน", "ลงให้ลึกจนข้อศอกทำมุม 90 องศา", "ตาควรมองตรงไปข้างหน้าเล็กน้อย"],
+    squat:  ["ทิ้งน้ำหนักลงที่ส้นเท้า", "ย่อลงจนต้นขาขนานกับพื้น", "ห้ามให้เข่าหุบเข้าหากัน"],
+    plank:  ["ลำตัวตรงเส้นเดียวตั้งแต่หัวถึงส้นเท้า", "กดข้อศอกลงพื้น ไม่ยกสะโพกสูงหรือต่ำเกิน", "หายใจตามปกติ อย่ากลั้นหายใจ"],
+    lunge:  ["ก้าวขาไปข้างหน้า 1 ก้าวยาว", "เข่าหน้าทำมุม 90° เข่าหลังเกือบถึงพื้น", "ลำตัวตั้งตรง ไม่เอนไปข้างหน้า"],
+  };
+  const icons = { pushup: "🤸", squat: "🦵", plank: "🧘", lunge: "🏃" };
+  const names = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE" };
 
   return (
     <div style={{ maxWidth: "480px", margin: "0 auto", padding: "40px 24px" }}>
@@ -253,32 +316,133 @@ function PageVideoTutorial({ exercise, onNext, onBack }) {
       </div>
       <div style={{ background: "#0d1a0d", border: "1px solid #00ff8822", borderRadius: "8px", overflow: "hidden", marginBottom: "24px" }}>
         <div style={{ background: "#060810", padding: "12px", borderBottom: "1px solid #00ff8822", fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#00ff88", letterSpacing: "2px" }}>
-          ▶ {exercise.toUpperCase()} DEMO
+          {icons[exercise]} {names[exercise] || exercise.toUpperCase()} DEMO
         </div>
-        <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "#000" }}>
-          <video src={vidSrc} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }} />
-        </div>
+        <div style={{ padding: "32px", textAlign: "center", fontSize: "80px", lineHeight: 1 }}>{icons[exercise]}</div>
         <div style={{ padding: "20px" }}>
           <ul style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffffbb", lineHeight: 1.8, paddingLeft: "20px", margin: 0 }}>
-            {exercise === "pushup" ? (
-              <>
-                <li>หลังและลำตัวต้องตรงเป็นแผ่นกระดาน</li>
-                <li>ลงให้ลึกจนข้อศอกทำมุม 90 องศา</li>
-                <li>ตาควรมองตรงไปข้างหน้าเล็กน้อย</li>
-              </>
-            ) : (
-              <>
-                <li>ทิ้งน้ำหนักลงที่ส้นเท้า</li>
-                <li>ย่อลงจนต้นขาขนานกับพื้น</li>
-                <li>ห้ามให้เข่าหุบเข้าหากัน</li>
-              </>
-            )}
+            {(tips[exercise] || []).map((t, i) => <li key={i}>{t}</li>)}
           </ul>
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "32px" }}>
         <GlowButton onClick={onNext} style={{ width: "100%" }}>I'M READY ⚡</GlowButton>
         <GlowButton variant="ghost" onClick={onBack} style={{ width: "100%", opacity: 0.5 }}>← BACK</GlowButton>
+      </div>
+    </div>
+  );
+}
+
+// [หน้า 4.5] หน้าสรุปผลหลังออกกำลัง พร้อมแคลอรี่ + บันทึกประวัติ
+function PageSummary({ result, stats, onPlayAgain, onBack }) {
+  const icons = { pushup: "🤸", squat: "🦵", plank: "🧘", lunge: "🏃" };
+  const names = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE" };
+  const mins = Math.floor(result.elapsed / 60), secs = result.elapsed % 60;
+  const timeStr = `${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
+  const isHold = result.exercise === "plank";
+  const statLabel = isHold ? `${result.totalReps}s HELD` : `${result.totalReps} REPS`;
+  const calLabel = `${result.calories} KCAL`;
+
+  const statCards = [
+    { label: "EXERCISE", val: names[result.exercise] || result.exercise.toUpperCase() },
+    { label: "SETS", val: `${result.sets}×${isHold ? result.exPlan.hold_sec+"s" : result.exPlan.reps}` },
+    { label: isHold ? "HELD" : "REPS", val: statLabel },
+    { label: "TIME", val: timeStr },
+    { label: "CALORIES", val: calLabel },
+  ];
+
+  return (
+    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ textAlign: "center", marginBottom: "40px" }}>
+        <div style={{ fontSize: "72px", marginBottom: "16px" }}>🏆</div>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#00ff8866", marginBottom: "12px" }}>//  SESSION COMPLETE</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(28px,5vw,40px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.1, margin: 0 }}>MISSION<br /><span style={{ color: "#00ff88" }}>ACCOMPLISHED</span></h1>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "32px" }}>
+        {statCards.map(({ label, val }) => (
+          <div key={label} style={{ background: "#0d1a0d", border: "1px solid #00ff8822", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "20px", fontWeight: 700, color: "#00ff88" }}>{val}</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff44", letterSpacing: "1px", marginTop: "4px" }}>{label}</div>
+          </div>
+        ))}
+      </div>
+      {/* Calorie highlight bar */}
+      <div style={{ background: "linear-gradient(135deg, #0d1a0d, #001a0a)", border: "1px solid #00ff8844", borderRadius: "8px", padding: "20px", marginBottom: "32px", display: "flex", alignItems: "center", gap: "16px" }}>
+        <div style={{ fontSize: "36px" }}>🔥</div>
+        <div>
+          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "28px", fontWeight: 700, color: "#ffd700" }}>{result.calories} kcal</div>
+          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff55", marginTop: "4px" }}>ประมาณการแคลอรี่ที่เผาผลาญ</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <GlowButton onClick={onPlayAgain} style={{ width: "100%" }}>⚡ ออกกำลังท่าอื่น</GlowButton>
+        <GlowButton variant="ghost" onClick={onBack} style={{ width: "100%" }}>← กลับแผนวันนี้</GlowButton>
+      </div>
+    </div>
+  );
+}
+
+// [หน้า H] หน้าประวัติการออกกำลัง
+function PageHistory({ onBack, stats }) {
+  const [history, setHistory] = useState(() => loadLS(LS_HISTORY, []));
+  const icons = { pushup: "🤸", squat: "🦵", plank: "🧘", lunge: "🏃" };
+  const names = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE" };
+
+  const clearHistory = () => { saveLS(LS_HISTORY, []); setHistory([]); };
+
+  const totalCal = history.reduce((s, h) => s + (h.calories || 0), 0);
+  const totalSessions = history.length;
+
+  return (
+    <div style={{ maxWidth: "520px", margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ marginBottom: "32px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#00bfff66", marginBottom: "12px" }}>//  WORKOUT HISTORY</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,4vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.2, margin: 0 }}>YOUR<br /><span style={{ color: "#00bfff" }}>JOURNEY</span></h1>
+      </div>
+      {/* Summary row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
+        {[["🏋️ SESSIONS", totalSessions], ["🔥 TOTAL KCAL", totalCal]].map(([k, v]) => (
+          <div key={k} style={{ background: "#0d1a0d", border: "1px solid #00bfff22", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "24px", fontWeight: 700, color: "#00bfff" }}>{v}</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff44", letterSpacing: "1px", marginTop: "4px" }}>{k}</div>
+          </div>
+        ))}
+      </div>
+      {history.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 24px", color: "#ffffff33", fontFamily: "'Space Mono',monospace", fontSize: "13px", lineHeight: 2 }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>📭</div>
+          ยังไม่มีประวัติการออกกำลัง<br />เริ่มออกกำลังแล้วจะบันทึกที่นี่
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
+          {history.map((h) => {
+            const d = new Date(h.id);
+            const dateStr = d.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+            const timeStr = d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+            const isHold = h.exercise === "plank";
+            const elapsed = h.elapsed || 0;
+            const m = Math.floor(elapsed / 60), s = elapsed % 60;
+            return (
+              <div key={h.id} style={{ background: "#0d1a0d", border: "1px solid #00bfff22", borderRadius: "8px", padding: "16px", display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{ fontSize: "28px", flexShrink: 0 }}>{icons[h.exercise] || "💪"}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", fontWeight: 700, color: "#00bfff" }}>{names[h.exercise] || h.exercise?.toUpperCase()}</div>
+                  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff55", marginTop: "3px" }}>
+                    {h.sets} sets · {isHold ? `${h.exPlan?.hold_sec || 0}s hold` : `${h.exPlan?.reps || 0} reps`} · {`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffd700" }}>{h.calories || 0} kcal</div>
+                  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff33", marginTop: "3px" }}>{dateStr} {timeStr}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: "10px" }}>
+        <GlowButton variant="ghost" onClick={onBack} style={{ flex: 1 }}>← กลับ</GlowButton>
+        {history.length > 0 && <GlowButton variant="danger" onClick={clearHistory} style={{ flex: 1 }}>🗑 ล้างประวัติ</GlowButton>}
       </div>
     </div>
   );
@@ -496,10 +660,11 @@ function PageCameraPreview({ exercise, plan, mediapipeReady, initialStream, onSt
 }
 
 // [หน้า 6] พระเอกของงานระบบจับภาพสดด้วย MediaPipe นำข้อมูลข้อต่อส่งกลับมาประมวลผลมุมและองศา
-function PageTracker({ exercise, plan, onFinish, mediapipeReady, initialStream }) {
+function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initialStream, weightKg }) {
   const videoRef = useRef(null), canvasRef = useRef(null), poseRef = useRef(null);
-  const streamRef = useRef(initialStream || null), rafRef = useRef(null);
+  const streamRef = useRef(null), rafRef = useRef(null);
   const stageRef = useRef("up"), counterRef = useRef(0), setNumRef = useRef(1), restingRef = useRef(false);
+  const plankHoldRef = useRef(0), plankIntervalRef = useRef(null), plankActiveRef = useRef(false);
   const [counter, setCounter] = useState(0), [setNum, setSetNum] = useState(1);
   const [angle, setAngle] = useState(0), [formOk, setFormOk] = useState(true);
   const [feedback, setFeedback] = useState("ตั้งตัวให้กล้องมองเห็น");
@@ -507,7 +672,10 @@ function PageTracker({ exercise, plan, onFinish, mediapipeReady, initialStream }
   const [cameraErr, setCameraErr] = useState(null), [done, setDone] = useState(false);
   const [startTime] = useState(Date.now()), [elapsed, setElapsed] = useState(0);
   const exPlan = plan[exercise];
+  const isPlank = exercise === "plank";
+  const exNames = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE" };
 
+  useEffect(() => { streamRef.current = initialStream || null; }, [initialStream]);
   useEffect(() => { const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000); return () => clearInterval(t); }, [startTime]);
 
   useEffect(() => {
@@ -548,7 +716,8 @@ function PageTracker({ exercise, plan, onFinish, mediapipeReady, initialStream }
     if (!canvas || !video) return;
     const ctx2d = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
     ctx2d.save(); ctx2d.translate(W, 0); ctx2d.scale(-1, 1); ctx2d.drawImage(results.image, 0, 0, W, H); ctx2d.restore();
-    if (!results.poseLandmarks) { setFeedback("ตั้งตัวให้กล้องมองเห็น"); drawHUD(ctx2d, W, H, counterRef.current, setNumRef.current, exPlan.reps, exPlan.sets, 0, true, "ตั้งตัวให้กล้องมองเห็น", stageRef.current, elapsed); return; }
+    const targetReps = isPlank ? exPlan.hold_sec : exPlan.reps;
+    if (!results.poseLandmarks) { setFeedback("ตั้งตัวให้กล้องมองเห็น"); drawHUD(ctx2d, W, H, counterRef.current, setNumRef.current, targetReps, exPlan.sets, 0, true, "ตั้งตัวให้กล้องมองเห็น", stageRef.current, elapsed); return; }
     const landmarks = results.poseLandmarks;
     if (window.drawConnectors && window.POSE_CONNECTIONS) window.drawConnectors(ctx2d, landmarks, window.POSE_CONNECTIONS, { color: "#00ff8833", lineWidth: 2 });
     if (window.drawLandmarks) window.drawLandmarks(ctx2d, landmarks, { color: "#00ff88", lineWidth: 1, radius: 3 });
@@ -559,35 +728,69 @@ function PageTracker({ exercise, plan, onFinish, mediapipeReady, initialStream }
         ang = calcAngle(shoulder, elbow, wrist);
         const bodyAng = calcAngle(shoulder, hip, ankle);
         if (Math.abs(bodyAng - 180) > 20) { ok = false; fb = "⚠ หลังค่อม! ขึงลำตัวให้ตรง"; } else fb = "✓ Perfect Form!";
-      } else {
+        if (ang > 160) { stageRef.current = "up"; }
+        if (ang < 70 && stageRef.current === "up" && ok) {
+          stageRef.current = "down"; counterRef.current += 1; setCounter(counterRef.current);
+          if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
+        }
+      } else if (exercise === "squat" || exercise === "lunge") {
         const hip = lm(landmarks, LM.L_HIP), knee = lm(landmarks, LM.L_KNEE), ankle = lm(landmarks, LM.L_ANKLE);
         ang = calcAngle(hip, knee, ankle);
-        if (Math.abs(knee[0] - ankle[0]) > 0.09) { ok = false; fb = "⚠ เข่าพับเข้า! เปิดเข่าออก"; } else fb = "✓ Solid Squat!";
-      }
-      setAngle(Math.round(ang)); setFormOk(ok); setFeedback(fb);
-      const downThresh = exercise === "pushup" ? 70 : 90;
-      if (ang > 160) { stageRef.current = "up"; }
-      if (ang < downThresh && stageRef.current === "up" && ok) {
-        stageRef.current = "down"; counterRef.current += 1; setCounter(counterRef.current);
-        if (counterRef.current >= exPlan.reps) {
-          if (setNumRef.current < exPlan.sets) {
-            restingRef.current = true; setIsResting(true); counterRef.current = 0; setCounter(0); setNumRef.current += 1; setSetNum(setNumRef.current);
-            let t = exPlan.rest_sec; setRestCountdown(t);
-            const iv = setInterval(() => { t--; setRestCountdown(t); if (t <= 0) { clearInterval(iv); restingRef.current = false; setIsResting(false); stageRef.current = "up"; } }, 1000);
-          } else { setDone(true); }
+        const label = exercise === "squat" ? "✓ Solid Squat!" : "✓ Good Lunge!";
+        const errLabel = exercise === "squat" ? "⚠ เข่าพับเข้า! เปิดเข่าออก" : "⚠ คุม balance ด้วย";
+        if (Math.abs(knee[0] - ankle[0]) > 0.09) { ok = false; fb = errLabel; } else fb = label;
+        if (ang > 160) { stageRef.current = "up"; }
+        if (ang < 90 && stageRef.current === "up" && ok) {
+          stageRef.current = "down"; counterRef.current += 1; setCounter(counterRef.current);
+          if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
+        }
+      } else if (isPlank) {
+        const shoulder = lm(landmarks, LM.L_SHOULDER), hip = lm(landmarks, LM.L_HIP), ankle = lm(landmarks, LM.L_ANKLE);
+        ang = calcAngle(shoulder, hip, ankle);
+        ok = Math.abs(ang - 180) < 25;
+        fb = ok ? "✓ Hold it! ค้างไว้" : "⚠ ยกสะโพกขึ้นนิดหน่อย";
+        if (ok && !plankActiveRef.current && !restingRef.current) {
+          plankActiveRef.current = true;
+          plankIntervalRef.current = setInterval(() => {
+            plankHoldRef.current += 1; setCounter(plankHoldRef.current);
+            if (plankHoldRef.current >= exPlan.hold_sec) {
+              clearInterval(plankIntervalRef.current); plankHoldRef.current = 0; plankActiveRef.current = false;
+              if (setNumRef.current < exPlan.sets) startRest(); else finishSet();
+            }
+          }, 1000);
+        } else if (!ok && plankActiveRef.current) {
+          clearInterval(plankIntervalRef.current); plankActiveRef.current = false;
+          fb = "⚠ หยุด! คืน form แล้ว hold ต่อ";
         }
       }
+      setAngle(Math.round(ang)); setFormOk(ok); setFeedback(fb);
     } catch (_) { }
-    drawHUD(ctx2d, W, H, counterRef.current, setNumRef.current, exPlan.reps, exPlan.sets, Math.round(ang), ok, fb, stageRef.current, elapsed);
-  }, [exercise, exPlan, elapsed]);
+    drawHUD(ctx2d, W, H, counterRef.current, setNumRef.current, isPlank ? exPlan.hold_sec : exPlan.reps, exPlan.sets, Math.round(ang), ok, fb, stageRef.current, elapsed);
+  }, [exercise, exPlan, elapsed, isPlank]);
+
+  function startRest() {
+    restingRef.current = true; setIsResting(true); counterRef.current = 0; setCounter(0); if (isPlank) plankHoldRef.current = 0;
+    setNumRef.current += 1; setSetNum(setNumRef.current);
+    let t = exPlan.rest_sec; setRestCountdown(t);
+    const iv = setInterval(() => { t--; setRestCountdown(t); if (t <= 0) { clearInterval(iv); restingRef.current = false; setIsResting(false); stageRef.current = "up"; } }, 1000);
+  }
+
+  function finishSet() {
+    if (isPlank && plankIntervalRef.current) clearInterval(plankIntervalRef.current);
+    const cal = estimateCalories(exercise, exPlan.sets * (isPlank ? exPlan.hold_sec : exPlan.reps), elapsed, weightKg || 65);
+    if (onDone) onDone({ exercise, exPlan, sets: exPlan.sets, totalReps: exPlan.sets * (isPlank ? exPlan.hold_sec : exPlan.reps), elapsed, calories: cal });
+    else setDone(true);
+  }
 
   function drawHUD(ctx2d, W, H, cnt, sn, tr, ts, ang, ok, fb, stage, el) {
     ctx2d.fillStyle = "rgba(6,8,16,0.75)"; ctx2d.fillRect(0, 0, W, 70);
-    ctx2d.fillStyle = "#00ff88"; ctx2d.font = "bold 13px 'Space Mono',monospace"; ctx2d.fillText(exercise === "pushup" ? "PUSH-UP" : "SQUAT", 20, 28);
+    ctx2d.fillStyle = "#00ff88"; ctx2d.font = "bold 13px 'Space Mono',monospace";
+    const exLabel = exNames[exercise] || exercise.toUpperCase();
+    ctx2d.fillText(exLabel, 20, 28);
     ctx2d.fillStyle = "#ffffff66"; ctx2d.font = "11px 'Space Mono',monospace"; ctx2d.fillText(`SET ${sn}/${ts}`, 20, 50);
     ctx2d.fillStyle = "#ffd700"; ctx2d.font = "bold 42px 'Space Mono',monospace";
-    const repStr = `${cnt}/${tr}`; ctx2d.fillText(repStr, W / 2 - ctx2d.measureText(repStr).width / 2, 52);
-    ctx2d.fillStyle = stage === "up" ? "#00ff88" : "#ff9800"; ctx2d.font = "bold 11px 'Space Mono',monospace"; ctx2d.fillText(stage.toUpperCase(), W - 120, 28);
+    const repStr = isPlank ? `${cnt}s` : `${cnt}/${tr}`; ctx2d.fillText(repStr, W / 2 - ctx2d.measureText(repStr).width / 2, 52);
+    ctx2d.fillStyle = stage === "up" ? "#00ff88" : "#ff9800"; ctx2d.font = "bold 11px 'Space Mono',monospace"; ctx2d.fillText(isPlank ? "HOLD" : stage.toUpperCase(), W - 120, 28);
     ctx2d.fillStyle = "#ffd700"; ctx2d.font = "bold 20px 'Space Mono',monospace"; ctx2d.fillText(`${ang}°`, W - 120, 52);
     ctx2d.fillStyle = ok ? "rgba(0,255,136,0.12)" : "rgba(255,51,102,0.18)"; ctx2d.fillRect(0, H - 56, W, 56);
     ctx2d.strokeStyle = ok ? "#00ff8844" : "#ff336644"; ctx2d.lineWidth = 1; ctx2d.beginPath(); ctx2d.moveTo(0, H - 56); ctx2d.lineTo(W, H - 56); ctx2d.stroke();
@@ -623,14 +826,19 @@ function PageTracker({ exercise, plan, onFinish, mediapipeReady, initialStream }
 // ============================================================================
 export default function AdaptableShadow() {
   const [page, setPage] = useState("profile");
-  const [stats, setStats] = useState({ weight: 70, height: 170, bodyFat: 22 });
-  const [ctx, setCtx] = useState({ calendar: "ว่าง", fatigue: 5, location: "บ้าน", weather: "แดดจ้า" });
+  const [stats, setStats] = useState(() => loadLS(LS_STATS, { weight: 70, height: 170, bodyFat: 22 }));
+  const [ctx, setCtx] = useState(() => loadLS(LS_CTX, { calendar: "ว่าง", fatigue: 5, location: "บ้าน", weather: "แดดจ้า" }));
   const [plan, setPlan] = useState(null);
   const [exercise, setExercise] = useState("pushup");
   const [planError, setPlanError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [mediapipeReady, setMediapipeReady] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
+  const [workoutResult, setWorkoutResult] = useState(null);
+
+  // บันทึก stats/ctx ลง localStorage เสมอเมื่อเปลี่ยน
+  useEffect(() => { saveLS(LS_STATS, stats); }, [stats]);
+  useEffect(() => { saveLS(LS_CTX, ctx); }, [ctx]);
 
   useEffect(() => {
     const loadScript = src => new Promise((res, rej) => {
@@ -645,6 +853,13 @@ export default function AdaptableShadow() {
   }, []);
 
   const stopCamera = () => { if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); setCameraStream(null); } };
+
+  const handleDone = (result) => {
+    stopCamera();
+    saveWorkoutSession(result); // บันทึกลง history
+    setWorkoutResult(result);
+    setPage("summary");
+  };
 
   const handleAnalyze = async () => {
     setLoading(true); setPlanError(null); setPage("planning");
@@ -682,11 +897,13 @@ export default function AdaptableShadow() {
         {page === "profile" && <PageProfile stats={stats} setStats={setStats} onNext={() => setPage("context")} />}
         {page === "context" && <PageContext ctx={ctx} setCtx={setCtx} onBack={() => setPage("profile")} onAnalyze={handleAnalyze} loading={loading} error={planError} />}
         {page === "planning" && <PagePlanning />}
-        {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setPage("tutorial"); }} onBack={() => setPage("context")} />}
+        {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setPage("tutorial"); }} onBack={() => setPage("context")} onHistory={() => setPage("history")} />}
         {page === "tutorial" && plan && <PageVideoTutorial exercise={exercise} onNext={() => { setCameraStream(null); setPage("camera-permission"); }} onBack={() => setPage("plan")} />}
         {page === "camera-permission" && plan && <PageCameraPermission exercise={exercise} plan={plan} onGranted={stream => { setCameraStream(stream); setPage("camera-preview"); }} onBack={() => setPage("tutorial")} />}
         {page === "camera-preview" && plan && <PageCameraPreview exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} onStart={() => setPage("tracker")} onBack={() => { stopCamera(); setPage("camera-permission"); }} />}
-        {page === "tracker" && plan && <PageTracker exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} onFinish={() => { stopCamera(); setPage("plan"); }} />}
+        {page === "tracker" && plan && <PageTracker exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} weightKg={stats.weight} onDone={handleDone} onFinish={() => { stopCamera(); setPage("plan"); }} />}
+        {page === "summary" && workoutResult && <PageSummary result={workoutResult} stats={stats} onPlayAgain={() => setPage("plan")} onBack={() => setPage("plan")} />}
+        {page === "history" && <PageHistory onBack={() => setPage("plan")} stats={stats} />}
       </div>
     </div>
   );
