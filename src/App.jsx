@@ -342,11 +342,14 @@ function PageCameraPermission({ exercise, plan, onGranted, onBack }) {
 // [หน้า 5.5] หน้า Preview กล้อง + AI Skeleton (แสดงภาพกล้องพร้อม AI ตรวจจับท่าก่อนเริ่มออกกำลัง)
 function PageCameraPreview({ exercise, plan, mediapipeReady, initialStream, onStart, onBack }) {
   const videoRef = useRef(null), canvasRef = useRef(null), poseRef = useRef(null);
-  const streamRef = useRef(initialStream || null), rafRef = useRef(null);
+  const streamRef = useRef(null), rafRef = useRef(null);
   const [poseDetected, setPoseDetected] = useState(false);
   const [cameraErr, setCameraErr] = useState(null);
   const [jointCount, setJointCount] = useState(0);
   const exPlan = plan[exercise];
+
+  // sync initialStream prop -> streamRef whenever it changes
+  useEffect(() => { streamRef.current = initialStream || null; }, [initialStream]);
 
   useEffect(() => {
     if (!mediapipeReady) return;
@@ -354,7 +357,15 @@ function PageCameraPreview({ exercise, plan, mediapipeReady, initialStream, onSt
     const init = async () => {
       try {
         let stream = streamRef.current;
-        if (!stream) stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "user" } });
+        if (!stream) {
+          // fallback: request camera if stream was lost
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "user" } });
+          } catch (permErr) {
+            setCameraErr("ไม่ได้รับอนุญาตใช้กล้อง กรุณากด ← กลับ แล้วอนุญาตใหม่อีกครั้ง");
+            return;
+          }
+        }
         if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
@@ -428,10 +439,15 @@ function PageCameraPreview({ exercise, plan, mediapipeReady, initialStream, onSt
           rafRef.current = requestAnimationFrame(loop);
         };
         rafRef.current = requestAnimationFrame(loop);
-      } catch (e) { setCameraErr("ไม่สามารถเข้าถึงกล้องได้ กรุณาลองใหม่"); }
+      } catch (e) { setCameraErr("ไม่สามารถเข้าถึงกล้องได้ กรุณากด ← กลับ แล้วลองใหม่: " + e.message); }
     };
     init();
-    return () => { active = false; if (rafRef.current) cancelAnimationFrame(rafRef.current); poseRef.current = null; };
+    return () => {
+      active = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      // ต้อง close Pose ก่อน ไม่งั้น instance เก่าจะยังถือกล้องค้าง
+      if (poseRef.current) { try { poseRef.current.close(); } catch (_) {} poseRef.current = null; }
+    };
   }, [mediapipeReady]);
 
   return (
@@ -519,7 +535,12 @@ function PageTracker({ exercise, plan, onFinish, mediapipeReady, initialStream }
       } catch (e) { setCameraErr("ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตสิทธิ์กล้องและรีเฟรช"); }
     };
     init();
-    return () => { active = false; if (rafRef.current) cancelAnimationFrame(rafRef.current); if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); poseRef.current = null; };
+    return () => {
+      active = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      if (poseRef.current) { try { poseRef.current.close(); } catch (_) {} poseRef.current = null; }
+    };
   }, [mediapipeReady]);
 
   const handleResults = useCallback((results) => {
