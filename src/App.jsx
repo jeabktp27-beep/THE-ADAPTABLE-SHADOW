@@ -48,22 +48,21 @@ const LM = {
 function lm(landmarks, idx) { return [landmarks[idx].x, landmarks[idx].y]; }
 
 // ฟังก์ชันเรียกขอแผนออกกำลังกายจาก Gemini ผ่าน Backend (server.js)
-async function fetchAIPlan(stats, ctx) {
+async function fetchAIPlan(stats, ctx, isWeekly = false) {
   const bmi = (stats.weight / (stats.height / 100) ** 2).toFixed(1);
   const prompt = `คุณคือ AI Personal Trainer ชื่อ "The Adaptable Shadow"
 ตอบกลับเป็น JSON เท่านั้น ไม่มีข้อความอื่นนอกจาก JSON บริสุทธิ์
 ข้อมูลผู้ใช้: น้ำหนัก ${stats.weight}kg, ส่วนสูง ${stats.height}cm, ไขมัน ${stats.bodyFat}%, BMI ${bmi}
-เป้าหมายของผู้ใช้วันนี้: "${stats.goal || 'ออกกำลังให้สุขภาพดี'}"
-บริบท: ตารางงาน="${ctx.calendar}", เหนื่อยล้า ${ctx.fatigue}/10, สถานที่="${ctx.location}", อากาศ="${ctx.weather}"
-กฎการตัดสิน:
-- เหนื่อยล้า>=7 หรือมีคำว่า ประชุม/ยุ่ง/งานเร่ง → mode="micro" (แค่ sets 2 reps 8-10)
-- เหนื่อยล้า 4-6 → mode="moderate" (sets 3 reps 12-15)
-- เหนื่อยล้า 1-3 และว่าง → mode="full" (sets 4 reps 20+)
-- ไขมัน<18% → reps+20% / ไขมัน>25% → reps-15%
-- เป้าหมายผู้ใช้: ปรับท่าออกกำลังและสารใน message/motivation ให้ตรงกับเป้าหมายนี้
-ท่าออกกำลัง: pushup(นับ reps), squat(นับ reps), plank(นับวินาที hold_sec), lunge(นับ reps)
-ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
-{"mode":"micro","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":2,"reps":10,"rest_sec":45},"squat":{"sets":2,"reps":12,"rest_sec":45},"plank":{"sets":2,"hold_sec":30,"rest_sec":30},"lunge":{"sets":2,"reps":10,"rest_sec":45},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
+เป้าหมายของผู้ใช้วันนี้/สัปดาห์นี้: "${stats.goal || 'ออกกำลังให้สุขภาพดี'}"
+บริบท: เหนื่อยล้า ${ctx.fatigue}/10, สถานที่="${ctx.location}", อากาศ="${ctx.weather}"
+
+${isWeekly ? `คำสั่ง: สร้างแผนออกกำลังกายสำหรับ 7 วัน (วันจันทร์-อาทิตย์)
+- ให้มีความหลากหลายในแต่ละวัน (สลับท่า กะน้ำหนัก/sets ต่างกัน)
+- มีวันพัก (Rest Day) อย่างน้อย 1-2 วัน
+- ตอบกลับรูปแบบ JSON: {"weekly": [{"day": "Mon", "mode": "...", "message": "...", "pushup": {...}, "squat": {...}, "plank": {...}, "lunge": {...}}, ...]}
+` : `คำสั่ง: สร้างแผนสำหรับวันนี้ 1 วัน
+- ตอบกลับรูปแบบ JSON: {"mode":"...","message":"...","motivation":"...","pushup":{...},"squat":{...},"plank":{...},"lunge":{...},"form_tip":"...","estimated_duration_min":...}`}
+`;
 
   const res = await fetch("/api/plan", {
     method: "POST",
@@ -261,8 +260,6 @@ function PagePlan({ plan, onStart, onBack, onHistory }) {
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <ModeChip mode={plan.mode} />
           <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44", letterSpacing: "2px" }}>{plan.estimated_duration_min} MIN</span>
-          <a href={getCalendarUrl()} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", textDecoration: "none", fontFamily: "'Space Mono',monospace", fontSize: "10px", padding: "6px 14px", background: "#1a2a1a", color: "#00ff88", borderRadius: "4px", border: "1px solid #00ff8844", display: "inline-block" }}>+ CALENDAR</a>
-          <button onClick={onHistory} style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", padding: "6px 14px", background: "#1a1a2a", color: "#00bfff", borderRadius: "4px", border: "1px solid #00bfff44", cursor: "pointer" }}>📋 HISTORY</button>
         </div>
         <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,4vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.2, margin: 0 }}>YOUR PLAN<br /><span style={{ color }}>IS READY</span></h1>
       </div>
@@ -281,10 +278,34 @@ function PagePlan({ plan, onStart, onBack, onHistory }) {
           </div>
         ))}
       </div>
-      <div style={{ background: "#060810", border: "1px solid #ffd70033", borderRadius: "4px", padding: "16px", marginBottom: "32px" }}>
+      <div style={{ background: "#060810", border: "1px solid #ffd70033", borderRadius: "4px", padding: "16px", marginBottom: "24px" }}>
         <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffd70099", letterSpacing: "2px" }}>📌 FORM TIP: </span>
         <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffd700" }}>{plan.form_tip}</span>
       </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
+        <a
+          href={getCalendarUrl()} target="_blank" rel="noreferrer"
+          style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "14px 16px", background: "linear-gradient(135deg,#0d2a0d,#0a1f0a)", border: "1px solid #00ff8866", borderRadius: "8px", boxShadow: "0 0 12px #00ff8820", fontFamily: "'Space Mono',monospace", fontSize: "12px", fontWeight: 700, color: "#00ff88", letterSpacing: "1px", transition: "all 0.2s" }}
+        >
+          📅 TODAY CALENDAR
+        </a>
+        <button
+          onClick={() => onHistory()}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "14px 16px", background: "linear-gradient(135deg,#0d1a2a,#0a1220)", border: "1px solid #00bfff66", borderRadius: "8px", boxShadow: "0 0 12px #00bfff20", fontFamily: "'Space Mono',monospace", fontSize: "12px", fontWeight: 700, color: "#00bfff", letterSpacing: "1px", cursor: "pointer", transition: "all 0.2s" }}
+        >
+          📋 HISTORY
+        </button>
+      </div>
+
+      {/* ปุ่มวางแผนทั้งสัปดาห์ */}
+      <div style={{ marginBottom: "32px" }}>
+        <GlowButton onClick={() => onHistory("weekly")} style={{ width: "100%", height: "54px", fontSize: "14px" }}>🗓️ GENERATE WEEKLY PLAN (GEMINI AI)</GlowButton>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff33", textAlign: "center", marginTop: "8px" }}>
+          AI จะสร้างตาราง 7 วันที่ปรับตามเป้าหมายและร่างกายของคุณโดยเฉพาะ
+        </div>
+      </div>
+
       <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#ffffff44", marginBottom: "12px" }}>//  CHOOSE EXERCISE TO START</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
         <GlowButton onClick={() => onStart("pushup")}>🤸 PUSH-UP</GlowButton>
@@ -293,6 +314,7 @@ function PagePlan({ plan, onStart, onBack, onHistory }) {
         <GlowButton onClick={() => onStart("lunge")} variant="ghost">🏃 LUNGE</GlowButton>
       </div>
       <div style={{ marginTop: "16px" }}><GlowButton variant="ghost" onClick={onBack} style={{ width: "100%", opacity: 0.5 }}>← REPLAN</GlowButton></div>
+
     </div>
   );
 }
@@ -443,6 +465,66 @@ function PageHistory({ onBack, stats }) {
       <div style={{ display: "flex", gap: "10px" }}>
         <GlowButton variant="ghost" onClick={onBack} style={{ flex: 1 }}>← กลับ</GlowButton>
         {history.length > 0 && <GlowButton variant="danger" onClick={clearHistory} style={{ flex: 1 }}>🗑 ล้างประวัติ</GlowButton>}
+      </div>
+    </div>
+  );
+}
+
+// [หน้า W] หน้าตารางรายสัปดาห์
+function PageWeeklyPlan({ weekly, onBack }) {
+  const downloadICS = () => {
+    let ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//The Adaptable Shadow//NONSGML v1.0//EN",
+    ];
+    const now = new Date();
+    weekly.forEach((day, i) => {
+      const start = new Date(now.getTime() + (i + 1) * 24 * 60 * 60000);
+      start.setHours(17, 0, 0); // Default 5 PM
+      const end = new Date(start.getTime() + 30 * 60000);
+      const fmt = d => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+      ics.push("BEGIN:VEVENT");
+      ics.push(`SUMMARY:Shadow Workout: ${day.day}`);
+      ics.push(`DESCRIPTION:${day.message}`);
+      ics.push(`DTSTART:${fmt(start)}`);
+      ics.push(`DTEND:${fmt(end)}`);
+      ics.push("END:VEVENT");
+    });
+    ics.push("END:VCALENDAR");
+    const blob = new Blob([ics.join("\r\n")], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "weekly_workout.ics"; a.click();
+  };
+
+  return (
+    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ marginBottom: "32px", textAlign: "center" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#00ff8866", marginBottom: "12px" }}>//  7-DAY AI SCHEDULE</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "36px", fontWeight: 700, color: "#ffffff", margin: 0 }}>WEEKLY<br /><span style={{ color: "#00ff88" }}>STRATEGY</span></h1>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px" }}>
+        {weekly.map((d, i) => (
+          <div key={i} style={{ background: "#0d1a0d", border: "1px solid #00ff8822", borderRadius: "8px", padding: "16px", display: "flex", gap: "16px", alignItems: "center" }}>
+            <div style={{ width: "50px", textAlign: "center", borderRight: "1px solid #00ff8822" }}>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, color: "#00ff88" }}>{d.day}</div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffff" }}>{d.message}</div>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff44", marginTop: "4px" }}>
+                PH: {d.pushup.sets}x{d.pushup.reps} | SQ: {d.squat.sets}x{d.squat.reps} | PK: {d.plank.hold_sec}s
+              </div>
+            </div>
+            <div style={{ fontSize: "10px", padding: "4px 8px", background: "#ffffff11", borderRadius: "10px", color: "#ffffff88", fontWeight: 700 }}>{d.mode.toUpperCase()}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <GlowButton onClick={downloadICS} style={{ width: "100%" }}>📅 EXPORT 7-DAYS TO GOOGLE CALENDAR (ICS)</GlowButton>
+        <GlowButton variant="ghost" onClick={onBack} style={{ width: "100%" }}>← BACK TO TODAY</GlowButton>
       </div>
     </div>
   );
@@ -835,6 +917,7 @@ export default function AdaptableShadow() {
   const [mediapipeReady, setMediapipeReady] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
   const [workoutResult, setWorkoutResult] = useState(null);
+  const [weeklyPlan, setWeeklyPlan] = useState(null);
 
   // บันทึก stats/ctx ลง localStorage เสมอเมื่อเปลี่ยน
   useEffect(() => { saveLS(LS_STATS, stats); }, [stats]);
@@ -861,14 +944,24 @@ export default function AdaptableShadow() {
     setPage("summary");
   };
 
-  const handleAnalyze = async () => {
-    setLoading(true); setPlanError(null); setPage("planning");
-    try { const p = await fetchAIPlan(stats, ctx); setPlan(p); setPage("plan"); }
+  const handleAnalyze = async (isWeekly = false) => {
+    setLoading(true); setPlanError(null);
+    if (!isWeekly) setPage("planning");
+    try {
+      const p = await fetchAIPlan(stats, ctx, isWeekly);
+      if (isWeekly) {
+        setWeeklyPlan(p.weekly);
+        setPage("weekly");
+      } else {
+        setPlan(p);
+        setPage("plan");
+      }
+    }
     catch (e) { setPlanError("เชื่อมต่อ AI ไม่ได้ กรุณาลองใหม่ (" + e.message + ")"); setPage("context"); }
     finally { setLoading(false); }
   };
 
-  const hideHeader = page === "tracker" || page === "camera-permission" || page === "camera-preview";
+  const hideHeader = page === "tracker" || page === "camera-permission" || page === "camera-preview" || page === "weekly";
 
   return (
     <div style={{ minHeight: "100vh", background: "#060810", color: "#ffffff" }}>
@@ -897,7 +990,8 @@ export default function AdaptableShadow() {
         {page === "profile" && <PageProfile stats={stats} setStats={setStats} onNext={() => setPage("context")} />}
         {page === "context" && <PageContext ctx={ctx} setCtx={setCtx} onBack={() => setPage("profile")} onAnalyze={handleAnalyze} loading={loading} error={planError} />}
         {page === "planning" && <PagePlanning />}
-        {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setPage("tutorial"); }} onBack={() => setPage("context")} onHistory={() => setPage("history")} />}
+        {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setPage("tutorial"); }} onBack={() => setPage("context")} onHistory={(mode) => mode === "weekly" ? handleAnalyze(true) : setPage("history")} />}
+        {page === "weekly" && weeklyPlan && <PageWeeklyPlan weekly={weeklyPlan} onBack={() => setPage("plan")} />}
         {page === "tutorial" && plan && <PageVideoTutorial exercise={exercise} onNext={() => { setCameraStream(null); setPage("camera-permission"); }} onBack={() => setPage("plan")} />}
         {page === "camera-permission" && plan && <PageCameraPermission exercise={exercise} plan={plan} onGranted={stream => { setCameraStream(stream); setPage("camera-preview"); }} onBack={() => setPage("tutorial")} />}
         {page === "camera-preview" && plan && <PageCameraPreview exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} onStart={() => setPage("tracker")} onBack={() => { stopCamera(); setPage("camera-permission"); }} />}
