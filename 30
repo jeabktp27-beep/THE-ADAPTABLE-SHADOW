@@ -1,0 +1,11 @@
+[33md903bf0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m add vercel.json to fix API route 404
+ vercel.json | 9 [32m+++++++++[m
+ 1 file changed, 9 insertions(+)
+[33m309a3e2[m fix: change Gemini model to gemini-2.0-flash and improve error messages
+ api/generate-plan.js | 13 [32m++++[m[31m---------[m
+ 1 file changed, 4 insertions(+), 9 deletions(-)
+[33mf5ba25e[m dfc
+ .firebase/hosting.ZGlzdA.cache |  4 [32m+[m[31m--[m
+ api/generate-plan.js           | 76 [32m++++++++++++++++++++++++++++++++++++++++++[m
+ src/App.jsx                    | 63 [32m+++++++[m[31m---------------------------[m
+ 3 files changed, 90 insertions(+), 53 deletions(-)
