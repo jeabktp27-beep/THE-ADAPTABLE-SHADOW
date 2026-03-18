@@ -26,52 +26,59 @@ export default async function handler(req, res) {
 {"mode":"micro","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":2,"reps":10,"rest_sec":45},"squat":{"sets":2,"reps":12,"rest_sec":45},"plank":{"sets":2,"hold_sec":30,"rest_sec":30},"lunge":{"sets":2,"reps":10,"rest_sec":45},"situp":{"sets":2,"reps":15,"rest_sec":45},"jumpingjack":{"sets":2,"reps":20,"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
 
   // ดึง API Key จาก Environment Variables ของ Vercel
-  const GEMINI_KEY = process.env.GEMINI_API_KEY;
+  const GROQ_KEY = process.env.GROQ_API_KEY;
 
-  if (!GEMINI_KEY) {
-    console.error("Missing GEMINI_API_KEY in Environment Variables");
+  if (!GROQ_KEY) {
+    console.error("Missing GROQ_API_KEY in Environment Variables");
     return res.status(500).json({ message: "⚠️ ระบบยังไม่ได้ตั้งค่า API Key กรุณาแจ้งผู้ดูแลระบบ" });
   }
 
   // ============================================================
-  // Retry Logic: ถ้า Gemini ตอบ 429 (Rate Limit) จะรอแล้วยิงใหม่
-  // ใช้ Exponential Backoff: รอ 2s → 4s → 8s (สูงสุด 3 รอบ)
+  // Retry Logic: Exponential Backoff (2s → 4s → 8s, สูงสุด 3 รอบ)
   // ============================================================
   const MAX_RETRIES = 3;
-  let lastError = null;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
-        }
-      );
+      // ============================================================
+      // เรียก Groq API (OpenAI-compatible format)
+      // ============================================================
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${GROQ_KEY}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            { role: "system", content: "คุณคือ AI Personal Trainer ตอบกลับเป็น JSON เท่านั้น ห้ามมี markdown" },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 1024
+        })
+      });
 
       // ถ้าโดน Rate Limit (429) → รอแล้วลองใหม่
       if (response.status === 429) {
-        const waitSec = Math.pow(2, attempt + 1); // 2s, 4s, 8s
+        const waitSec = Math.pow(2, attempt + 1);
         console.warn(`[Attempt ${attempt + 1}/${MAX_RETRIES}] Rate limited (429). Waiting ${waitSec}s...`);
         await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
         continue;
       }
 
-      // ถ้า Error อื่นที่ไม่ใช่ 429
+      // ถ้า Error อื่น
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Gemini API Error:", response.status, errorText);
+        console.error("Groq API Error:", response.status, errorText);
         const friendlyMsg = getFriendlyErrorMessage(response.status, errorText);
         return res.status(response.status).json({ message: friendlyMsg });
       }
 
-      // สำเร็จ! แปลงผลลัพธ์
+      // สำเร็จ! ดึง JSON จาก Groq response
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const text = data.choices?.[0]?.message?.content || "{}";
 
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) {
@@ -83,31 +90,26 @@ export default async function handler(req, res) {
 
     } catch (error) {
       console.error(`[Attempt ${attempt + 1}] Error:`, error.message);
-      lastError = error;
     }
   }
 
-  // ถ้าลองครบ 3 รอบแล้วยังไม่ผ่าน
-  console.error("All retries exhausted. Last error:", lastError?.message);
+  // ลองครบ 3 รอบแล้วยังไม่ผ่าน
   return res.status(429).json({
     message: "🔥 ระบบ AI มีคนใช้เยอะในตอนนี้ กรุณารอ 1-2 นาทีแล้วลองใหม่อีกครั้งครับ"
   });
 }
 
 // ============================================================
-// แปลง Error Code → ข้อความภาษาไทยที่อ่านง่าย
+// แปลง Error Code → ข้อความภาษาไทย
 // ============================================================
 function getFriendlyErrorMessage(status, errorText) {
   switch (status) {
     case 400:
-      if (errorText.includes("API key not valid")) {
-        return "🔑 API Key ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่าใน Vercel Environment Variables";
-      }
       return "⚠️ ข้อมูลที่ส่งไปไม่ถูกต้อง กรุณาลองใหม่";
     case 401:
-      return "🔐 ไม่มีสิทธิ์เข้าถึง API กรุณาตรวจสอบ API Key";
+      return "🔐 API Key ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่า";
     case 403:
-      return "🚫 API Key ถูกระงับการใช้งาน กรุณาตรวจสอบที่ Google AI Studio";
+      return "🚫 API Key ถูกระงับการใช้งาน";
     case 404:
       return "❌ ไม่พบโมเดล AI กรุณาแจ้งผู้ดูแลระบบ";
     case 429:
