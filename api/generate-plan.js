@@ -30,42 +30,92 @@ export default async function handler(req, res) {
 
   if (!GEMINI_KEY) {
     console.error("Missing GEMINI_API_KEY in Environment Variables");
-    return res.status(500).json({ message: "Server configuration error: Missing API Key." });
+    return res.status(500).json({ message: "⚠️ ระบบยังไม่ได้ตั้งค่า API Key กรุณาแจ้งผู้ดูแลระบบ" });
   }
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
+  // ============================================================
+  // Retry Logic: ถ้า Gemini ตอบ 429 (Rate Limit) จะรอแล้วยิงใหม่
+  // ใช้ Exponential Backoff: รอ 2s → 4s → 8s (สูงสุด 3 รอบ)
+  // ============================================================
+  const MAX_RETRIES = 3;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        }
+      );
+
+      // ถ้าโดน Rate Limit (429) → รอแล้วลองใหม่
+      if (response.status === 429) {
+        const waitSec = Math.pow(2, attempt + 1); // 2s, 4s, 8s
+        console.warn(`[Attempt ${attempt + 1}/${MAX_RETRIES}] Rate limited (429). Waiting ${waitSec}s...`);
+        await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+        continue;
       }
-    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API Error:", response.status, errorText);
-      return res.status(response.status).json({ 
-        message: `Gemini API Error (${response.status}): ${errorText.substring(0, 200)}` 
-      });
+      // ถ้า Error อื่นที่ไม่ใช่ 429
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini API Error:", response.status, errorText);
+        const friendlyMsg = getFriendlyErrorMessage(response.status, errorText);
+        return res.status(response.status).json({ message: friendlyMsg });
+      }
+
+      // สำเร็จ! แปลงผลลัพธ์
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) {
+        console.error("No JSON match in AI response:", text);
+        return res.status(500).json({ message: "🤖 AI ตอบกลับมาไม่ถูกรูปแบบ กรุณาลองใหม่อีกครั้ง" });
+      }
+
+      return res.status(200).json(JSON.parse(match[0]));
+
+    } catch (error) {
+      console.error(`[Attempt ${attempt + 1}] Error:`, error.message);
+      lastError = error;
     }
+  }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+  // ถ้าลองครบ 3 รอบแล้วยังไม่ผ่าน
+  console.error("All retries exhausted. Last error:", lastError?.message);
+  return res.status(429).json({
+    message: "🔥 ระบบ AI มีคนใช้เยอะในตอนนี้ กรุณารอ 1-2 นาทีแล้วลองใหม่อีกครั้งครับ"
+  });
+}
 
-    // ดึงเฉพาะส่วน JSON ออกมา
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) {
-      console.error("No JSON match in AI response:", text);
-      return res.status(500).json({ message: "AI response did not contain JSON" });
-    }
-
-    return res.status(200).json(JSON.parse(match[0]));
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    return res.status(500).json({ message: "Internal Server Error", details: error.message });
+// ============================================================
+// แปลง Error Code → ข้อความภาษาไทยที่อ่านง่าย
+// ============================================================
+function getFriendlyErrorMessage(status, errorText) {
+  switch (status) {
+    case 400:
+      if (errorText.includes("API key not valid")) {
+        return "🔑 API Key ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่าใน Vercel Environment Variables";
+      }
+      return "⚠️ ข้อมูลที่ส่งไปไม่ถูกต้อง กรุณาลองใหม่";
+    case 401:
+      return "🔐 ไม่มีสิทธิ์เข้าถึง API กรุณาตรวจสอบ API Key";
+    case 403:
+      return "🚫 API Key ถูกระงับการใช้งาน กรุณาตรวจสอบที่ Google AI Studio";
+    case 404:
+      return "❌ ไม่พบโมเดล AI กรุณาแจ้งผู้ดูแลระบบ";
+    case 429:
+      return "🔥 ระบบ AI มีคนใช้เยอะในตอนนี้ กรุณารอ 1-2 นาทีแล้วลองใหม่";
+    case 500:
+    case 503:
+      return "🛠️ เซิร์ฟเวอร์ AI ขัดข้อง กรุณาลองใหม่ภายหลัง";
+    default:
+      return `⚠️ เกิดข้อผิดพลาดจาก AI (Error ${status}) กรุณาลองใหม่`;
   }
 }
