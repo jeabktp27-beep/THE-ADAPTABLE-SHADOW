@@ -50,7 +50,7 @@ function playBeep(freq = 880, duration = 0.1, type = "sine", vol = 0.3) {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start(ctx.currentTime); osc.stop(ctx.currentTime + duration);
-  } catch (_) {}
+  } catch (_) { }
 }
 const Sound = {
   rep: () => playBeep(880, 0.12, "sine", 0.35),
@@ -80,7 +80,7 @@ function lm(landmarks, idx) { return [landmarks[idx].x, landmarks[idx].y]; }
 // ฟังก์ชันเรียกขอแผนออกกำลังกายจาก Gemini ผ่าน Backend (server.js / Vercel API Route)
 async function fetchAIPlan(stats, ctx) {
   console.log("Fetching AI plan from Backend...");
-  
+
   const res = await fetch('/api/generate-plan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -94,7 +94,7 @@ async function fetchAIPlan(stats, ctx) {
   }
 
   const plan = await res.json();
-  
+
   // ใส่ค่า default ถ้า Gemini ตอบไม่ครบ
   if (!plan.pushup) plan.pushup = { sets: 2, reps: 10, rest_sec: 45 };
   if (!plan.squat) plan.squat = { sets: 2, reps: 12, rest_sec: 45 };
@@ -125,9 +125,9 @@ function GlowButton({ children, onClick, variant = "primary", disabled, style })
   const c = colors[variant];
   return (
     <>
-      <style>{`@keyframes btnPulse{0%,100%{box-shadow:${c.shadow}}50%{box-shadow:${c.shadow.replace(/\d+px/g,m=>(parseInt(m)*1.5)+'px')}}}`}</style>
+      <style>{`@keyframes btnPulse{0%,100%{box-shadow:${c.shadow}}50%{box-shadow:${c.shadow.replace(/\d+px/g, m => (parseInt(m) * 1.5) + 'px')}}}`}</style>
       <button onClick={onClick} disabled={disabled} style={{ padding: "16px 36px", fontFamily: "'Space Mono',monospace", fontWeight: 700, fontSize: "14px", letterSpacing: "2px", textTransform: "uppercase", cursor: disabled ? "not-allowed" : "pointer", border: c.border || "none", borderRadius: "8px", background: c.bg, color: c.color, boxShadow: c.shadow, opacity: disabled ? 0.4 : 1, transition: "all 0.25s", animation: disabled ? "none" : "btnPulse 2s ease-in-out infinite", ...style }}
-        onMouseEnter={e => { if(!disabled) { e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)'; }}}
+        onMouseEnter={e => { if (!disabled) { e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)'; } }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; }}
       >
         {children}
@@ -753,7 +753,7 @@ function PageHistory({ onBack, stats }) {
               const data = { stats, history: loadLS(LS_HISTORY, []), ctx: loadLS(LS_CTX, {}) };
               const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
               const url = URL.createObjectURL(blob);
-              const a = document.createElement("a"); a.href = url; a.download = `shadow_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+              const a = document.createElement("a"); a.href = url; a.download = `shadow_backup_${new Date().toISOString().slice(0, 10)}.json`; a.click();
               URL.revokeObjectURL(url);
             }}
             style={{ flex: 1, padding: "12px", background: "#0d1a0d", border: "1px solid #00ff8844", borderRadius: "4px", color: "#00ff88", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, cursor: "pointer", letterSpacing: "1px" }}
@@ -898,7 +898,7 @@ function PageCameraPermission({ exercise, plan, onGranted, onBack }) {
   const requestCamera = async () => {
     setStatus("requesting");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "user" } });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
       onGranted(stream);
     } catch (e) {
       setStatus(e.name === "NotAllowedError" || e.name === "PermissionDeniedError" ? "denied" : "error");
@@ -967,7 +967,7 @@ function PageCameraPreview({ exercise, plan, mediapipeReady, initialStream, onSt
         if (!stream) {
           // fallback: request camera if stream was lost
           try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "user" } });
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
           } catch (permErr) {
             setCameraErr("ไม่ได้รับอนุญาตใช้กล้อง กรุณากด ← กลับ แล้วอนุญาตใหม่อีกครั้ง");
             return;
@@ -978,7 +978,7 @@ function PageCameraPreview({ exercise, plan, mediapipeReady, initialStream, onSt
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         const p = new window.Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}` });
-        p.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.55, minTrackingConfidence: 0.55 });
+        p.setOptions({ modelComplexity: 0, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.55, minTrackingConfidence: 0.55 });
         p.onResults((results) => {
           if (!active) return;
           const canvas = canvasRef.current, video = videoRef.current;
@@ -1108,6 +1108,7 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
   const streamRef = useRef(null), rafRef = useRef(null);
   const stageRef = useRef("up"), counterRef = useRef(0), setNumRef = useRef(1), restingRef = useRef(false);
   const lastCountTimeRef = useRef(0);
+  const badFormCounterRef = useRef(0); // นับ rep ที่ทำผิดท่า: ทุก 2 ครั้งผิด = 1 ครั้งถูก
   const plankHoldRef = useRef(0), plankIntervalRef = useRef(null), plankActiveRef = useRef(false);
   const [counter, setCounter] = useState(0), [setNum, setSetNum] = useState(1);
   const [angle, setAngle] = useState(0), [formOk, setFormOk] = useState(true);
@@ -1128,13 +1129,13 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
     const init = async () => {
       try {
         let stream = streamRef.current;
-        if (!stream) stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+        if (!stream) stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
         if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         const p = new window.Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}` });
-        p.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+        p.setOptions({ modelComplexity: 0, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
         p.onResults(handleResults);
         await p.initialize();
         poseRef.current = p;
@@ -1181,9 +1182,15 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
         else if (ang >= 70 && ang <= 160) { fb = "↓ ลงให้ลึกกว่านี้!"; }
         else { fb = "✓ Perfect Form!"; }
         if (ang > 160) { stageRef.current = "up"; }
-        if (ang < 70 && stageRef.current === "up" && ok && Date.now() - lastCountTimeRef.current > 500) {
-          stageRef.current = "down"; counterRef.current += 1; setCounter(counterRef.current);
-          lastCountTimeRef.current = Date.now(); Sound.rep();
+        if (ang < 70 && stageRef.current === "up" && Date.now() - lastCountTimeRef.current > 500) {
+          stageRef.current = "down";
+          lastCountTimeRef.current = Date.now();
+          if (ok) {
+            counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
+          } else {
+            badFormCounterRef.current += 1;
+            if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+          }
           if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
         }
       } else if (exercise === "squat" || exercise === "lunge") {
@@ -1202,9 +1209,15 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
         else if (!torsoUpright) { ok = false; fb = "⚠ ลำตัวเอน! ตั้งตัวให้ตรง"; Sound.error(); }
         else { fb = label; }
         if (ang > 160) { stageRef.current = "up"; }
-        if (ang < 90 && stageRef.current === "up" && ok && Date.now() - lastCountTimeRef.current > 500) {
-          stageRef.current = "down"; counterRef.current += 1; setCounter(counterRef.current);
-          lastCountTimeRef.current = Date.now(); Sound.rep();
+        if (ang < 90 && stageRef.current === "up" && Date.now() - lastCountTimeRef.current > 500) {
+          stageRef.current = "down";
+          lastCountTimeRef.current = Date.now();
+          if (ok) {
+            counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
+          } else {
+            badFormCounterRef.current += 1;
+            if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+          }
           if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
         }
       } else if (exercise === "situp") {
@@ -1217,10 +1230,16 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
         else if (Math.abs(elbow[1] - shoulder[1]) > 0.15 && ang < 90) { ok = false; fb = "⚠ อย่าดึงคอ! ใช้หน้าท้องยกตัว"; Sound.error(); }
         else { fb = ang > 140 ? "✓ ลงไป! เตรียมขึ้น" : ang < 70 ? "✓ ขึ้นมาแล้ว! ดีมาก" : "✓ Good Form!"; }
         if (ang > 140) { stageRef.current = "down"; }
-        // STRICT: นับเฉพาะเมื่อ form ถูกต้อง
-        if (ang < 70 && stageRef.current === "down" && ok && Date.now() - lastCountTimeRef.current > 500) {
-          stageRef.current = "up"; counterRef.current += 1; setCounter(counterRef.current);
-          lastCountTimeRef.current = Date.now(); Sound.rep();
+        // นับ: form ถูก = +1, form ผิด 2 ครั้ง = +1
+        if (ang < 70 && stageRef.current === "down" && Date.now() - lastCountTimeRef.current > 500) {
+          stageRef.current = "up";
+          lastCountTimeRef.current = Date.now();
+          if (ok) {
+            counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
+          } else {
+            badFormCounterRef.current += 1;
+            if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+          }
           if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
         }
       } else if (exercise === "jumpingjack") {
@@ -1241,10 +1260,16 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
         else if (ang > 140 && !legsSpread) { ok = false; fb = "⚠ กางขาออกด้วย! ไม่ใช่แค่แขน"; Sound.error(); }
         else { fb = ang > 140 && legsSpread ? "✓ กางแขน+ขาออก!" : ang < 40 ? "✓ หุบแขน+ขา!" : "✓ Keep Going!"; }
         if (ang < 40) { stageRef.current = "down"; }
-        // MULTI-JOINT: นับเฉพาะเมื่อ form ถูกต้องทุกข้อ (แขนกาง+ขากาง+ตัวตรง)
-        if (ang > 140 && stageRef.current === "down" && ok && Date.now() - lastCountTimeRef.current > 500) {
-          stageRef.current = "up"; counterRef.current += 1; setCounter(counterRef.current);
-          lastCountTimeRef.current = Date.now(); Sound.rep();
+        // นับ: form ถูก = +1, form ผิด 2 ครั้ง = +1
+        if (ang > 140 && stageRef.current === "down" && Date.now() - lastCountTimeRef.current > 500) {
+          stageRef.current = "up";
+          lastCountTimeRef.current = Date.now();
+          if (ok) {
+            counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
+          } else {
+            badFormCounterRef.current += 1;
+            if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+          }
           if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
         }
       } else if (isPlank) {
@@ -1285,7 +1310,7 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
   }, [exercise, exPlan, elapsed, isPlank]);
 
   function startRest() {
-    restingRef.current = true; setIsResting(true); counterRef.current = 0; setCounter(0); if (isPlank) plankHoldRef.current = 0;
+    restingRef.current = true; setIsResting(true); counterRef.current = 0; setCounter(0); badFormCounterRef.current = 0; if (isPlank) plankHoldRef.current = 0;
     setNumRef.current += 1; setSetNum(setNumRef.current);
     let t = exPlan.rest_sec; setRestCountdown(t);
     const iv = setInterval(() => { t--; setRestCountdown(t); Sound.tick(); if (t <= 0) { clearInterval(iv); restingRef.current = false; setIsResting(false); stageRef.current = "up"; } }, 1000);
@@ -1398,12 +1423,12 @@ export default function AdaptableShadow() {
   };
 
   // บันทึก stats/ctx ลง localStorage เสมอเมื่อเปลี่ยน (และอัพขึ้น Cloud ถ้าล็อกอินอยู่)
-  useEffect(() => { 
-    saveLS(LS_STATS, stats); 
+  useEffect(() => {
+    saveLS(LS_STATS, stats);
     if (user) syncToCloud(user.uid, stats, ctx, loadLS(LS_HISTORY, []));
   }, [stats]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { 
-    saveLS(LS_CTX, ctx); 
+  useEffect(() => {
+    saveLS(LS_CTX, ctx);
     if (user) syncToCloud(user.uid, stats, ctx, loadLS(LS_HISTORY, []));
   }, [ctx]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1490,11 +1515,11 @@ export default function AdaptableShadow() {
       <Scanline />
       {!hideHeader && (
         <div style={{ borderBottom: "1px solid #00ff8811", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", letterSpacing: "3px", color: "#00ff88", fontWeight: 700 }}>◆ THE ADAPTABLE SHADOW <span style={{fontSize:'8px', opacity:0.5}}>[v2.1 - DIRECT AI]</span></div>
+          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", letterSpacing: "3px", color: "#00ff88", fontWeight: 700 }}>◆ THE ADAPTABLE SHADOW <span style={{ fontSize: '8px', opacity: 0.5 }}>[v2.1 - DIRECT AI]</span></div>
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
             {/* User Login Section */}
             {user ? (
-              <button 
+              <button
                 onClick={handleLogout}
                 style={{ background: "#060810", border: "1px solid #00ff8844", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#00ff88", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "6px" }}
               >
@@ -1502,16 +1527,16 @@ export default function AdaptableShadow() {
                 {user.displayName?.split(" ")[0]}
               </button>
             ) : (
-              <button 
+              <button
                 onClick={handleLogin}
                 style={{ background: "linear-gradient(135deg, #00ff8833, #00cc6a22)", border: "2px solid #00ff88", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, color: "#00ff88", transition: "all 0.25s", boxShadow: "0 0 15px #00ff8844", letterSpacing: "1px" }}
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 25px #00ff8866'; e.currentTarget.style.transform = 'scale(1.05)'; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 15px #00ff8844'; e.currentTarget.style.transform = 'scale(1)'; }}
               >
-                ☁️ CLOUD SYNC
+                ☁️ สมัครสมาชิก
               </button>
             )}
-            
+
             <button
               onClick={() => { _soundEnabled = !_soundEnabled; setSoundEnabled(_soundEnabled); }}
               style={{ background: "none", border: `1px solid ${soundEnabled ? "#00ff8844" : "#ffffff22"}`, borderRadius: "4px", padding: "4px 10px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "11px", color: soundEnabled ? "#00ff88" : "#ffffff44", transition: "all 0.2s" }}
