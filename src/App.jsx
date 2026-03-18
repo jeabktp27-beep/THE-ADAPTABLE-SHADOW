@@ -1334,11 +1334,15 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
     const repStr = isPlank ? `${cnt}s` : `${cnt}/${tr}`; ctx2d.fillText(repStr, W / 2 - ctx2d.measureText(repStr).width / 2, 52);
     ctx2d.fillStyle = stage === "up" ? "#00ff88" : "#ff9800"; ctx2d.font = "bold 11px 'Space Mono',monospace"; ctx2d.fillText(isPlank ? "HOLD" : stage.toUpperCase(), W - 120, 28);
     ctx2d.fillStyle = "#ffd700"; ctx2d.font = "bold 20px 'Space Mono',monospace"; ctx2d.fillText(`${ang}°`, W - 120, 52);
-    ctx2d.fillStyle = ok ? "rgba(0,255,136,0.12)" : "rgba(255,51,102,0.18)"; ctx2d.fillRect(0, H - 56, W, 56);
-    ctx2d.strokeStyle = ok ? "#00ff8844" : "#ff336644"; ctx2d.lineWidth = 1; ctx2d.beginPath(); ctx2d.moveTo(0, H - 56); ctx2d.lineTo(W, H - 56); ctx2d.stroke();
-    ctx2d.fillStyle = ok ? "#00ff88" : "#ff4466"; ctx2d.font = "bold 18px 'Space Mono',monospace"; ctx2d.fillText(fb, 20, H - 20);
+    const barH = ok ? 56 : 90;
+    ctx2d.fillStyle = ok ? "rgba(0,255,136,0.12)" : "rgba(255,51,102,0.35)"; ctx2d.fillRect(0, H - barH, W, barH);
+    if (!ok) { ctx2d.fillStyle = "rgba(255,51,102,0.15)"; ctx2d.fillRect(0, H - barH - 8, W, 8); } // red accent line
+    ctx2d.strokeStyle = ok ? "#00ff8844" : "#ff3366"; ctx2d.lineWidth = ok ? 1 : 3; ctx2d.beginPath(); ctx2d.moveTo(0, H - barH); ctx2d.lineTo(W, H - barH); ctx2d.stroke();
+    ctx2d.fillStyle = ok ? "#00ff88" : "#ff4466"; ctx2d.font = ok ? "bold 18px 'Space Mono',monospace" : "bold 28px 'Space Mono',monospace";
+    ctx2d.fillText(fb, 20, ok ? H - 20 : H - 50);
+    if (!ok) { ctx2d.fillStyle = "#ff446699"; ctx2d.font = "14px 'Space Mono',monospace"; ctx2d.fillText("แก้ท่าให้ถูกต้อง! (ผิด 2 ครั้ง = นับ 1)", 20, H - 18); }
     const m = Math.floor(el / 60), s = el % 60, tStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    ctx2d.fillStyle = "#ffffff33"; ctx2d.font = "12px 'Space Mono',monospace"; ctx2d.fillText(tStr, W / 2 - ctx2d.measureText(tStr).width / 2, H - 20);
+    ctx2d.fillStyle = "#ffffff33"; ctx2d.font = "12px 'Space Mono',monospace"; ctx2d.fillText(tStr, W / 2 - ctx2d.measureText(tStr).width / 2, ok ? H - 20 : H - 18);
   }
 
   const mins = Math.floor(elapsed / 60), secs = elapsed % 60;
