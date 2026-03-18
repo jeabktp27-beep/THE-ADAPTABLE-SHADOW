@@ -77,63 +77,24 @@ const LM = {
 };
 function lm(landmarks, idx) { return [landmarks[idx].x, landmarks[idx].y]; }
 
-// ฟังก์ชันเรียกขอแผนออกกำลังกายจาก Gemini ผ่าน Backend (server.js)
-// ฟังก์ชันเรียกขอแผนออกกำลังกายจาก Gemini ผ่าน Backend (server.js)
+// ฟังก์ชันเรียกขอแผนออกกำลังกายจาก Gemini ผ่าน Backend (server.js / Vercel API Route)
 async function fetchAIPlan(stats, ctx) {
-  const bmi = (stats.weight / (stats.height / 100) ** 2).toFixed(1);
-  const prompt = `คุณคือ AI Personal Trainer ชื่อ "The Adaptable Shadow"
-ตอบกลับเป็น JSON เท่านั้น ไม่มีข้อความอื่นนอกจาก JSON บริสุทธิ์
-ข้อมูลผู้ใช้: น้ำหนัก ${stats.weight}kg, ส่วนสูง ${stats.height}cm, ไขมัน ${stats.bodyFat}%, BMI ${bmi}
-เป้าหมายของผู้ใช้วันนี้: "${stats.goal || 'ออกกำลังให้สุขภาพดี'}"
-บริบท: เหนื่อยล้า ${ctx.fatigue}/10, สถานที่="${ctx.location}", อากาศ="${ctx.weather}"
-กฎการตัดสิน:
-- เหนื่อยล้า>=7 หรือมีคำว่า ประชุม/ยุ่ง/งานเร่ง → mode="micro" (แค่ sets 2 reps 8-10)
-- เหนื่อยล้า 4-6 → mode="moderate" (sets 3 reps 12-15)
-- เหนื่อยล้า 1-3 และว่าง → mode="full" (sets 4 reps 20+)
-- ไขมัน<18% → reps+20% / ไขมัน>25% → reps-15%
-- เป้าหมายผู้ใช้: ปรับท่าออกกำลังและสารใน message/motivation ให้ตรงกับเป้าหมายนี้
-ท่าออกกำลัง: pushup(นับ reps), squat(นับ reps), plank(นับวินาที hold_sec), lunge(นับ reps), situp(นับ reps), jumpingjack(นับ reps)
-ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
-{"mode":"micro","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":2,"reps":10,"rest_sec":45},"squat":{"sets":2,"reps":12,"rest_sec":45},"plank":{"sets":2,"hold_sec":30,"rest_sec":30},"lunge":{"sets":2,"reps":10,"rest_sec":45},"situp":{"sets":2,"reps":15,"rest_sec":45},"jumpingjack":{"sets":2,"reps":20,"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
-
-  const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY;
-  console.log("Fetching AI plan with prompt...");
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    }
-  );
+  console.log("Fetching AI plan from Backend...");
+  
+  const res = await fetch('/api/generate-plan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stats, ctx })
+  });
 
   if (!res.ok) {
-    const errorText = await res.text();
-    console.error("Gemini API Error:", res.status, errorText);
-    throw new Error(`Gemini API Error (${res.status}): ${errorText.substring(0, 100)}`);
+    const errorData = await res.json().catch(() => ({}));
+    console.error("Backend/Gemini Error:", res.status, errorData);
+    throw new Error(errorData.message || `Backend Error (${res.status})`);
   }
 
-  const contentType = res.headers.get("content-type");
-  if (!contentType || !contentType.includes("application/json")) {
-    const textBody = await res.text();
-    console.error("Non-JSON Response:", textBody);
-    throw new Error("AI ตอบกลับมาเป็น HTML แทนที่จะเป็นข้อมูล (อาจเกิดจากปัญหา Network หรือ Config)");
-  }
-
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-  console.log("AI Raw Text:", text);
-
-  // ดึงเฉพาะส่วน JSON ออกมา
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) {
-    console.error("No JSON match in AI response:", text);
-    throw new Error("AI ตอบกลับไม่ถูกต้อง (ไม่พบ JSON)");
-  }
+  const plan = await res.json();
   
-  const plan = JSON.parse(match[0]);
   // ใส่ค่า default ถ้า Gemini ตอบไม่ครบ
   if (!plan.pushup) plan.pushup = { sets: 2, reps: 10, rest_sec: 45 };
   if (!plan.squat) plan.squat = { sets: 2, reps: 12, rest_sec: 45 };
