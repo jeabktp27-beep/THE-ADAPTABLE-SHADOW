@@ -137,67 +137,74 @@ function Scanline() {
 }
 
 // [หน้า Login] หน้าจอล็อกอินเต็มหน้าจอ — ต้องล็อกอินก่อนใช้งาน
+// [หน้า Login] Hero Landing Page — อ้างอิง FitGenius AI
 function PageLogin({ onLogin, loading }) {
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", position: "relative", overflow: "hidden" }}>
-      <Scanline />
+    <div style={{ minHeight: "100vh", background: "#0a0a12", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", position: "relative", overflow: "hidden" }}>
       {/* Background glow */}
-      <div style={{ position: "absolute", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, #00ff8810, transparent 70%)", top: "5%", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: "radial-gradient(circle, #00bfff08, transparent 70%)", bottom: "10%", right: "5%", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: "-20%", right: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(0,255,136,0.08), transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: "-10%", left: "-10%", width: "400px", height: "400px", borderRadius: "50%", background: "radial-gradient(circle, rgba(0,191,255,0.06), transparent 70%)", pointerEvents: "none" }} />
 
-      {/* Logo */}
-      <div style={{ marginBottom: "48px", textAlign: "center", zIndex: 1 }}>
-        <div style={{ fontSize: "56px", marginBottom: "24px", color: "#00ff88", animation: "pulse 2.5s ease-in-out infinite" }}>◆</div>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "6px", color: "#ffffff33", marginBottom: "16px" }}>WELCOME TO</div>
-        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(26px,6vw,44px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>
-          THE ADAPTABLE<br /><span style={{ color: "#00ff88" }}>SHADOW</span>
+      {/* Badge */}
+      <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "50px", padding: "8px 16px", marginBottom: "32px", zIndex: 1 }}>
+        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#00ff88", boxShadow: "0 0 8px #00ff8888" }} />
+        <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff88" }}>AI Personal Trainer V2.0</span>
+      </div>
+
+      {/* Hero Text */}
+      <div style={{ textAlign: "center", zIndex: 1, maxWidth: "560px", marginBottom: "40px" }}>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(32px,7vw,56px)", fontWeight: 700, lineHeight: 1.1, margin: 0, color: "#ffffff" }}>
+          ปั้นหุ่นในฝันด้วย<br />
+          <span style={{ background: "linear-gradient(135deg, #00ff88, #00bfff, #3b82f6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>เทรนเนอร์ AI ส่วนตัว</span>
         </h1>
-        <p style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffff44", marginTop: "16px", lineHeight: 1.8, maxWidth: "360px" }}>
-          AI Workout Tracker ที่ปรับตัวตามคุณ
+        <p style={{ fontFamily: "'Space Mono',monospace", fontSize: "13px", color: "#ffffff55", marginTop: "20px", lineHeight: 1.8 }}>
+          AI วิเคราะห์ร่างกาย ตรวจท่า real-time และสร้างแผนที่ปรับเปลี่ยนตามคุณ
         </p>
       </div>
 
-      {/* Login Card */}
-      <div style={{ background: "#12141d", border: "1px solid #00ff8822", borderRadius: "16px", padding: "36px 28px", maxWidth: "400px", width: "100%", textAlign: "center", zIndex: 1, boxShadow: "0 8px 40px rgba(0,0,0,0.4)" }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "3px", color: "#00ff8888", marginBottom: "24px" }}>🔐  เข้าสู่ระบบเพื่อเริ่มต้น</div>
+      {/* Login Button */}
+      <button
+        onClick={onLogin}
+        disabled={loading}
+        style={{
+          padding: "16px 40px", background: "#00ff88", border: "none", borderRadius: "50px",
+          cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "12px",
+          fontFamily: "'Space Mono',monospace", fontSize: "15px", fontWeight: 700, color: "#0a0a12",
+          transition: "all 0.3s", boxShadow: "0 0 30px rgba(0,255,136,0.3)", opacity: loading ? 0.6 : 1,
+          minHeight: "56px", zIndex: 1, letterSpacing: "0.5px",
+        }}
+        onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(0,255,136,0.5)'; } }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(0,255,136,0.3)'; }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย Google"}
+      </button>
 
-        {/* Google Login Button */}
-        <button
-          onClick={onLogin}
-          disabled={loading}
-          style={{
-            width: "100%", padding: "16px 24px", background: "#ffffff", border: "none", borderRadius: "12px",
-            cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px",
-            fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, color: "#1a1a1a",
-            transition: "all 0.25s", boxShadow: "0 4px 20px rgba(0,0,0,0.3)", opacity: loading ? 0.6 : 1,
-            minHeight: "52px",
-          }}
-          onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 30px rgba(0,0,0,0.4)'; } }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)'; }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย Google"}
-        </button>
-
-        {/* Feature badges */}
-        <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap", marginTop: "24px" }}>
-          {["☁️ Cloud Sync", "🤖 AI Trainer", "📷 Pose Detection"].map(t => (
-            <span key={t} style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", padding: "5px 10px", background: "#0d0f18", border: "1px solid #ffffff11", borderRadius: "20px", color: "#ffffff55", letterSpacing: "1px" }}>{t}</span>
-          ))}
-        </div>
+      {/* Feature Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", maxWidth: "560px", width: "100%", marginTop: "48px", zIndex: 1 }}>
+        {[
+          { icon: "🤖", title: "แผนฝึกอัจฉริยะ", desc: "AI ปรับตามร่างกายคุณ" },
+          { icon: "📷", title: "ตรวจท่า Real-time", desc: "แจ้งเตือนทันทีทำผิด" },
+          { icon: "☁️", title: "Cloud Sync", desc: "ข้อมูลปลอดภัยทุกอุปกรณ์" },
+        ].map(f => (
+          <div key={f.title} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "20px", padding: "24px 16px", textAlign: "center", transition: "all 0.3s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,255,136,0.3)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            <div style={{ fontSize: "28px", marginBottom: "12px" }}>{f.icon}</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, color: "#ffffff", marginBottom: "6px" }}>{f.title}</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff44", lineHeight: 1.5 }}>{f.desc}</div>
+          </div>
+        ))}
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: "48px", textAlign: "center", zIndex: 1 }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff18", letterSpacing: "2px" }}>POWERED BY AI + MEDIAPIPE</div>
-      </div>
-
-      <style>{`@keyframes pulse{0%,100%{opacity:1;text-shadow:0 0 20px #00ff88}50%{opacity:0.5;text-shadow:0 0 50px #00ff88}}`}</style>
+      <div style={{ marginTop: "48px", fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff15", letterSpacing: "2px", zIndex: 1 }}>THE ADAPTABLE SHADOW — POWERED BY AI + MEDIAPIPE</div>
     </div>
   );
 }
@@ -385,29 +392,30 @@ function PageContext({ ctx, setCtx, onBack, onAnalyze, loading, error }) {
       </div>
       {error && <div style={{ marginTop: "16px", padding: "12px", background: "#ff336615", border: "1px solid #ff336644", borderRadius: "8px", color: "#ff6688", fontFamily: "'Space Mono',monospace", fontSize: "12px" }}>{error}</div>}
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", gap: "12px" }}>
-        <GlowButton variant="ghost" onClick={onBack} style={{ minHeight: "52px" }}>← กลับ</GlowButton>
-        <GlowButton onClick={onAnalyze} disabled={loading} style={{ flex: 1, minHeight: "52px" }}>{loading ? "กำลังวิเคราะห์..." : "สร้างแผน AI ⚡"}</GlowButton>
+        <button onClick={onBack} style={{ padding: "14px 24px", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "50px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffff55", transition: "all 0.2s", minHeight: "52px" }}>← กลับ</button>
+        <button onClick={onAnalyze} disabled={loading}
+          style={{ flex: 1, padding: "14px 24px", background: "#00ff88", border: "none", borderRadius: "50px", cursor: loading ? "not-allowed" : "pointer", fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, color: "#0a0a12", transition: "all 0.3s", boxShadow: "0 0 30px rgba(0,255,136,0.3)", opacity: loading ? 0.6 : 1, minHeight: "52px" }}
+        >{loading ? "กำลังวิเคราะห์..." : "สร้างแผน AI ⚡"}</button>
       </div>
     </div>
   );
 }
 
-// [หน้าคั่น] หน้าต่างโหลดระหว่ารอ Gemini AI กำลังจัดตาราง
+// [หน้าคั่น] หน้าต่างโหลดระหว่ารอ AI กำลังจัดตาราง
 function PagePlanning() {
   const [dots, setDots] = useState(0);
   useEffect(() => { const t = setInterval(() => setDots(d => (d + 1) % 4), 400); return () => clearInterval(t); }, []);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", textAlign: "center", padding: "40px" }}>
-      <div style={{ width: "80px", height: "80px", border: "3px solid #00ff8833", borderTop: "3px solid #00ff88", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "40px" }} />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#00ff8866" }}>//  AI กำลังวิเคราะห์</div>
+      <div style={{ width: "60px", height: "60px", border: "3px solid rgba(255,255,255,0.06)", borderTop: "3px solid #00ff88", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "40px" }} />
+      <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "4px", color: "#ffffff33" }}>AI กำลังวิเคราะห์</div>
       <h2 style={{ fontFamily: "'Space Mono',monospace", color: "#ffffff", fontSize: "24px", margin: "16px 0" }}>กำลังคิด{".".repeat(dots)}</h2>
       <p style={{ color: "#ffffff44", fontFamily: "'Space Mono',monospace", fontSize: "12px", maxWidth: "300px", lineHeight: 1.8 }}>กำลังวิเคราะห์ข้อมูลร่างกายและบริบทชีวิตของคุณ</p>
     </div>
   );
 }
 
-// [หน้า 3] หน้าสรุปแผน พร้อมปุ่มเพิ่มลง Google Calendar และให้ผู้ใช้เริ่มออกกำลัง
+// [หน้า 3] Plan — สไตล์ FitGenius workout cards
 function PagePlan({ plan, onStart, onStartGuided, onBack, onHistory, onDashboard }) {
   const modeColors = { micro: "#ff9800", moderate: "#00bfff", full: "#00ff88" };
   const color = modeColors[plan.mode] || "#00ff88";
@@ -424,89 +432,93 @@ function PagePlan({ plan, onStart, onStartGuided, onBack, onHistory, onDashboard
   };
 
   const exercises = [
-    { key: "pushup", label: "PUSH-UP", icon: "🤸", stat: `${plan.pushup.sets}×${plan.pushup.reps}`, sub: `REST ${plan.pushup.rest_sec}s` },
-    { key: "squat", label: "SQUAT", icon: "🦵", stat: `${plan.squat.sets}×${plan.squat.reps}`, sub: `REST ${plan.squat.rest_sec}s` },
-    { key: "plank", label: "PLANK", icon: "🧘", stat: `${plan.plank.sets}×${plan.plank.hold_sec}s`, sub: `REST ${plan.plank.rest_sec}s` },
-    { key: "lunge", label: "LUNGE", icon: "🏃", stat: `${plan.lunge.sets}×${plan.lunge.reps}`, sub: `REST ${plan.lunge.rest_sec}s` },
-    { key: "situp", label: "SIT-UP", icon: "🧑\u200d🦿", stat: `${plan.situp.sets}×${plan.situp.reps}`, sub: `REST ${plan.situp.rest_sec}s` },
-    { key: "jumpingjack", label: "JUMPING JACK", icon: "⭐", stat: `${plan.jumpingjack.sets}×${plan.jumpingjack.reps}`, sub: `REST ${plan.jumpingjack.rest_sec}s` },
+    { key: "pushup", label: "Push-up", icon: "🤸", stat: `${plan.pushup.sets}×${plan.pushup.reps}`, sub: `พัก ${plan.pushup.rest_sec}วิ`, accent: "#00ff88" },
+    { key: "squat", label: "Squat", icon: "🦵", stat: `${plan.squat.sets}×${plan.squat.reps}`, sub: `พัก ${plan.squat.rest_sec}วิ`, accent: "#00bfff" },
+    { key: "plank", label: "Plank", icon: "🧘", stat: `${plan.plank.sets}×${plan.plank.hold_sec}s`, sub: `พัก ${plan.plank.rest_sec}วิ`, accent: "#ffd700" },
+    { key: "lunge", label: "Lunge", icon: "🏃", stat: `${plan.lunge.sets}×${plan.lunge.reps}`, sub: `พัก ${plan.lunge.rest_sec}วิ`, accent: "#ff6633" },
+    { key: "situp", label: "Sit-up", icon: "🧑‍🦿", stat: `${plan.situp.sets}×${plan.situp.reps}`, sub: `พัก ${plan.situp.rest_sec}วิ`, accent: "#a855f7" },
+    { key: "jumpingjack", label: "Jumping Jack", icon: "⭐", stat: `${plan.jumpingjack.sets}×${plan.jumpingjack.reps}`, sub: `พัก ${plan.jumpingjack.rest_sec}วิ`, accent: "#ff3366" },
   ];
 
   return (
-    <div style={{ maxWidth: "520px", margin: "0 auto", padding: "40px 24px" }}>
-      <div style={{ marginBottom: "32px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+    <div style={{ maxWidth: "520px", margin: "0 auto", padding: "32px 20px" }}>
+      <div style={{ marginBottom: "28px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
           <ModeChip mode={plan.mode} />
-          <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44", letterSpacing: "2px" }}>{plan.estimated_duration_min} MIN</span>
+          <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44" }}>{plan.estimated_duration_min} นาที</span>
         </div>
-        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,4vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.2, margin: 0 }}>แผนของคุณ<br /><span style={{ color }}>พร้อมแล้ว!</span></h1>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>แผนของคุณ <span style={{ background: "linear-gradient(135deg, #00ff88, #00bfff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>พร้อมแล้ว!</span></h1>
       </div>
-      <div style={{ background: "#0d1a0d", border: `1px solid ${color}33`, borderLeft: `3px solid ${color}`, borderRadius: "4px", padding: "20px", marginBottom: "24px" }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: `${color}99`, marginBottom: "8px" }}>//  AI TRAINER SAYS</div>
-        <p style={{ color: "#ffffff", fontFamily: "'Space Mono',monospace", fontSize: "14px", lineHeight: 1.8, margin: 0 }}>{plan.message}</p>
-        <p style={{ color: color, fontFamily: "'Space Mono',monospace", fontSize: "13px", lineHeight: 1.8, margin: "12px 0 0", fontStyle: "italic" }}>💪 {plan.motivation}</p>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
-        {exercises.map(({ key, label, icon, stat, sub }) => (
-          <div key={key} style={{ background: "#0d1a0d", border: `1px solid ${color}22`, borderRadius: "8px", padding: "16px" }}>
-            <div style={{ fontSize: "20px", marginBottom: "6px" }}>{icon}</div>
-            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "2px", color: `${color}99`, marginBottom: "8px" }}>{label}</div>
-            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "22px", fontWeight: 700, color }}>{stat}</div>
-            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff44", marginTop: "4px" }}>{sub}</div>
+
+      {/* AI Message Card */}
+      <div style={{ background: "#111318", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "20px", padding: "20px", marginBottom: "24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: `${color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>🤖</div>
+          <div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", fontWeight: 700, color: "#ffffff" }}>AI Coach</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: color }}>สร้างเมื่อสักครู่</div>
           </div>
+        </div>
+        <p style={{ color: "#ffffffcc", fontFamily: "'Space Mono',monospace", fontSize: "13px", lineHeight: 1.8, margin: 0 }}>{plan.message}</p>
+        <p style={{ color: color, fontFamily: "'Space Mono',monospace", fontSize: "12px", margin: "10px 0 0", fontStyle: "italic" }}>💪 {plan.motivation}</p>
+      </div>
+
+      {/* Workout Cards */}
+      <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff44", letterSpacing: "2px", marginBottom: "12px" }}>แผนประจำวัน</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
+        {exercises.map(({ key, label, icon, stat, sub, accent }) => (
+          <button key={key} onClick={() => onStart(key)}
+            style={{ background: "#111318", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "16px 18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "all 0.2s", textAlign: "left" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = `${accent}44`; e.currentTarget.style.transform = 'translateX(4px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateX(0)'; }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div style={{ width: "44px", height: "44px", borderRadius: "14px", background: `${accent}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 }}>{icon}</div>
+              <div>
+                <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "13px", fontWeight: 700, color: "#ffffff" }}>{label}</div>
+                <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff44", marginTop: "2px" }}>{sub}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "16px", fontWeight: 700, color: accent }}>{stat}</div>
+              <div style={{ color: "#ffffff33", fontSize: "16px" }}>›</div>
+            </div>
+          </button>
         ))}
       </div>
-      <div style={{ background: "#060810", border: "1px solid #ffd70033", borderRadius: "4px", padding: "16px", marginBottom: "24px" }}>
-        <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffd70099", letterSpacing: "2px" }}>📌 FORM TIP: </span>
-        <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffd700" }}>{plan.form_tip}</span>
+
+      {/* Form Tip */}
+      <div style={{ background: "#111318", border: "1px solid #ffd70022", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", alignItems: "center", gap: "10px" }}>
+        <span style={{ fontSize: "16px" }}>📌</span>
+        <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffd700cc" }}>{plan.form_tip}</span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "24px" }}>
-        <a
-          href={getCalendarUrl()} target="_blank" rel="noreferrer"
-          style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "14px 12px", background: "linear-gradient(135deg,#0d2a0d,#0a1f0a)", border: "1px solid #00ff8866", borderRadius: "8px", boxShadow: "0 0 12px #00ff8820", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, color: "#00ff88", letterSpacing: "1px", transition: "all 0.2s" }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = "0 0 24px #00ff8840"}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = "0 0 12px #00ff8820"}
-        >
-          📅 CALENDAR
-        </a>
-        <button
-          onClick={onHistory}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "14px 12px", background: "linear-gradient(135deg,#0d1a2a,#0a1220)", border: "1px solid #00bfff66", borderRadius: "8px", boxShadow: "0 0 12px #00bfff20", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, color: "#00bfff", letterSpacing: "1px", cursor: "pointer", transition: "all 0.2s" }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = "0 0 24px #00bfff40"}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = "0 0 12px #00bfff20"}
-        >
-          📋 HISTORY
-        </button>
-        <button
-          onClick={onDashboard}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "14px 12px", background: "linear-gradient(135deg,#1a0d2a,#120a20)", border: "1px solid #a855f766", borderRadius: "8px", boxShadow: "0 0 12px #a855f720", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, color: "#a855f7", letterSpacing: "1px", cursor: "pointer", transition: "all 0.2s" }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = "0 0 24px #a855f740"}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = "0 0 12px #a855f720"}
-        >
-          📊 STATS
-        </button>
+      {/* CTA */}
+      <button onClick={onStartGuided}
+        style={{ width: "100%", padding: "18px", background: "#00ff88", border: "none", borderRadius: "50px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, color: "#0a0a12", transition: "all 0.3s", boxShadow: "0 0 30px rgba(0,255,136,0.3)", minHeight: "56px", marginBottom: "16px" }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(0,255,136,0.5)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(0,255,136,0.3)'; }}
+      >🎯 เริ่มออกกำลังกายอัตโนมัติ (ทำทุกท่า)</button>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "16px" }}>
+        {[
+          { label: "📅 Calendar", onClick: () => window.open(getCalendarUrl(), '_blank'), accent: "#00ff88" },
+          { label: "📋 History", onClick: onHistory, accent: "#00bfff" },
+          { label: "📊 Stats", onClick: onDashboard, accent: "#a855f7" },
+        ].map(b => (
+          <button key={b.label} onClick={b.onClick}
+            style={{ padding: "12px", background: "#111318", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "14px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "10px", fontWeight: 700, color: b.accent, transition: "all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = `${b.accent}44`}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'}
+          >{b.label}</button>
+        ))}
       </div>
 
-      <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#ffffff44", marginBottom: "12px" }}>//  เลือกท่าเพื่อเริ่ม</div>
-      {/* Guided Workout: พาทำทีละท่าตามลำดับ */}
-      <div style={{ marginBottom: "16px" }}>
-        <GlowButton onClick={onStartGuided} style={{ width: "100%", fontSize: "14px", padding: "18px" }}>🎯 เริ่มออกกำลังกายอัตโนมัติ (ทำทุกท่า)</GlowButton>
-      </div>
-      <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff33", textAlign: "center", marginBottom: "16px" }}>── หรือเลือกท่าเอง ──</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-        <GlowButton onClick={() => onStart("pushup")}>🤸 PUSH-UP</GlowButton>
-        <GlowButton onClick={() => onStart("squat")} variant="ghost">🦵 SQUAT</GlowButton>
-        <GlowButton onClick={() => onStart("plank")} variant="ghost">🧘 PLANK</GlowButton>
-        <GlowButton onClick={() => onStart("lunge")} variant="ghost">🏃 LUNGE</GlowButton>
-        <GlowButton onClick={() => onStart("situp")} variant="ghost">🧑‍🦿 SIT-UP</GlowButton>
-        <GlowButton onClick={() => onStart("jumpingjack")} variant="ghost">⭐ JUMPING JACK</GlowButton>
-      </div>
-      <div style={{ marginTop: "16px" }}><GlowButton variant="ghost" onClick={onBack} style={{ width: "100%", opacity: 0.5 }}>← วางแผนใหม่</GlowButton></div>
-
+      <button onClick={onBack} style={{ width: "100%", padding: "14px", background: "transparent", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "50px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffff44", transition: "all 0.2s" }}>← วางแผนใหม่</button>
     </div>
   );
 }
+
 
 // [หน้า 4] หน้าแสดงวิดีโอตัวอย่างท่าที่ถูกต้องให้ผู้ใช้ดูก่อน
 function PageVideoTutorial({ exercise, onNext, onBack }) {
@@ -1576,7 +1588,7 @@ export default function AdaptableShadow() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0;}body{background:#0a0a0f;}
+        *{box-sizing:border-box;margin:0;padding:0;}body{background:#0a0a12;}
         input[type=range]{-webkit-appearance:none;appearance:none;}
         input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:#00ff88;border-radius:50%;box-shadow:0 0 12px #00ff8888;cursor:pointer;margin-top:-6px;}
         input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;}
@@ -1588,8 +1600,8 @@ export default function AdaptableShadow() {
 
       {/* Auth Loading Screen */}
       {authLoading ? (
-        <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px" }}>
-          <div style={{ width: "40px", height: "40px", border: "3px solid #ffffff11", borderTop: "3px solid #00ff88", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+        <div style={{ minHeight: "100vh", background: "#0a0a12", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px" }}>
+          <div style={{ width: "40px", height: "40px", border: "3px solid rgba(255,255,255,0.06)", borderTop: "3px solid #00ff88", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
           <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff33", letterSpacing: "3px" }}>กำลังโหลด...</div>
         </div>
       ) : !user ? (
@@ -1597,30 +1609,30 @@ export default function AdaptableShadow() {
         <PageLogin onLogin={handleLogin} loading={loginLoading} />
       ) : (
         /* App หลัก — ล็อกอินแล้ว */
-        <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#ffffff" }}>
-          <Scanline />
+        <div style={{ minHeight: "100vh", background: "#0a0a12", color: "#ffffff" }}>
           {!hideHeader && (
-            <div style={{ borderBottom: "1px solid #00ff8811", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", letterSpacing: "3px", color: "#00ff88", fontWeight: 700 }}>◆ THE ADAPTABLE SHADOW <span style={{ fontSize: '8px', opacity: 0.5 }}>[v2.1 - DIRECT AI]</span></div>
-              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                {/* User Profile */}
+            <div style={{ position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(10,10,18,0.85)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "18px", color: "#00ff88" }}>◆</span>
+                <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", fontWeight: 700, background: "linear-gradient(135deg, #00ff88, #00bfff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>THE ADAPTABLE SHADOW</span>
+              </div>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                 <button
                   onClick={handleLogout}
-                  style={{ background: "#060810", border: "1px solid #00ff8844", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#00ff88", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "6px" }}
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "50px", padding: "5px 12px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff88", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "6px" }}
                 >
-                  <img src={user.photoURL} alt="profile" style={{ width: "16px", height: "16px", borderRadius: "50%" }} referrerPolicy="no-referrer" />
+                  <img src={user.photoURL} alt="profile" style={{ width: "18px", height: "18px", borderRadius: "50%" }} referrerPolicy="no-referrer" />
                   {user.displayName?.split(" ")[0]}
                 </button>
-
                 <button
                   onClick={() => { _soundEnabled = !_soundEnabled; setSoundEnabled(_soundEnabled); }}
-                  style={{ background: "none", border: `1px solid ${soundEnabled ? "#00ff8844" : "#ffffff22"}`, borderRadius: "4px", padding: "4px 10px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "11px", color: soundEnabled ? "#00ff88" : "#ffffff44", transition: "all 0.2s" }}
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "50px", padding: "5px 10px", cursor: "pointer", fontSize: "14px", transition: "all 0.2s" }}
                 >
                   {soundEnabled ? "🔊" : "🔇"}
                 </button>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ display: "flex", gap: "6px" }}>
                   {["profile", "context", "plan"].map((p, i) => (
-                    <div key={p} style={{ width: "8px", height: "8px", borderRadius: "50%", background: page === p ? "#00ff88" : ["profile", "context", "plan", "planning"].indexOf(page) > i ? "#00ff8844" : "#1a2a1a", boxShadow: page === p ? "0 0 8px #00ff88" : "none" }} />
+                    <div key={p} style={{ width: "8px", height: "8px", borderRadius: "50%", background: page === p ? "#00ff88" : ["profile", "context", "plan", "planning"].indexOf(page) > i ? "#00ff8844" : "rgba(255,255,255,0.08)", boxShadow: page === p ? "0 0 8px #00ff88" : "none", transition: "all 0.3s" }} />
                   ))}
                 </div>
               </div>
