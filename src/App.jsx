@@ -132,8 +132,75 @@ async function fetchAIPlan(stats, ctx) {
 // ============================================================================
 
 // เอฟเฟกต์ตกแต่งสไตล์ Cyberpunk (เส้นสแกนจอ)
-function Scanline() {      // ← บรรทัดถัดไปต้องเป็นนี้เลย
+function Scanline() {
   return <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,0.015) 2px,rgba(0,255,136,0.015) 4px)" }} />;
+}
+
+// [หน้า Login] หน้าจอล็อกอินเต็มหน้าจอ — ต้องล็อกอินก่อนใช้งาน
+function PageLogin({ onLogin, loading }) {
+  return (
+    <div style={{ minHeight: "100vh", background: "#000000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", position: "relative", overflow: "hidden" }}>
+      <Scanline />
+      {/* Background glow effect */}
+      <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: "radial-gradient(circle, #00ff8815, transparent 70%)", top: "10%", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", width: "300px", height: "300px", borderRadius: "50%", background: "radial-gradient(circle, #00bfff10, transparent 70%)", bottom: "15%", right: "10%", pointerEvents: "none" }} />
+
+      {/* Logo */}
+      <div style={{ marginBottom: "48px", textAlign: "center", zIndex: 1 }}>
+        <div style={{ fontSize: "64px", marginBottom: "24px", animation: "pulse 2s ease-in-out infinite" }}>◆</div>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "6px", color: "#00ff8866", marginBottom: "16px" }}>// WELCOME TO</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(28px,6vw,48px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.1, margin: 0 }}>
+          THE ADAPTABLE<br /><span style={{ color: "#00ff88" }}>SHADOW</span>
+        </h1>
+        <p style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffff44", marginTop: "16px", lineHeight: 1.8, maxWidth: "360px" }}>
+          AI Personal Trainer ที่ปรับตัวตามคุณ<br />
+          วิเคราะห์ท่า real-time ด้วย Computer Vision
+        </p>
+      </div>
+
+      {/* Login Card */}
+      <div style={{ background: "#0d1a0d", border: "1px solid #00ff8833", borderRadius: "16px", padding: "40px 32px", maxWidth: "420px", width: "100%", textAlign: "center", zIndex: 1, boxShadow: "0 0 60px #00ff8810" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "3px", color: "#00ff8899", marginBottom: "24px" }}>🔐  เข้าสู่ระบบเพื่อเริ่มต้น</div>
+
+        {/* Google Login Button */}
+        <button
+          onClick={onLogin}
+          disabled={loading}
+          style={{
+            width: "100%", padding: "16px 24px", background: "#ffffff", border: "none", borderRadius: "12px",
+            cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px",
+            fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, color: "#1a1a1a",
+            transition: "all 0.25s", boxShadow: "0 4px 20px rgba(0,0,0,0.3)", opacity: loading ? 0.6 : 1,
+          }}
+          onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 30px rgba(0,0,0,0.4)'; } }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)'; }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย Google"}
+        </button>
+
+        {/* Feature badges */}
+        <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap", marginTop: "28px" }}>
+          {["☁️ Cloud Sync", "🤖 AI Trainer", "📷 Pose Detection"].map(t => (
+            <span key={t} style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", padding: "5px 10px", background: "#060810", border: "1px solid #00ff8822", borderRadius: "20px", color: "#00ff8877", letterSpacing: "1px" }}>{t}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ marginTop: "40px", textAlign: "center", zIndex: 1 }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff22", letterSpacing: "2px" }}>POWERED BY AI + MEDIAPIPE</div>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff11", marginTop: "8px" }}>v2.1 — DIRECT AI</div>
+      </div>
+
+      <style>{`@keyframes pulse{0%,100%{opacity:1;text-shadow:0 0 20px #00ff88}50%{opacity:0.6;text-shadow:0 0 40px #00ff88}}`}</style>
+    </div>
+  );
 }
 
 function GlowButton({ children, onClick, variant = "primary", disabled, style }) {
@@ -1393,6 +1460,8 @@ export default function AdaptableShadow() {
   const [workoutResult, setWorkoutResult] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true); // รอเช็คสถานะ auth
+  const [loginLoading, setLoginLoading] = useState(false);
   // Guided Workout: คิวท่าที่ต้องทำตามลำดับ
   const [guidedQueue, setGuidedQueue] = useState([]);
   const [guidedResults, setGuidedResults] = useState([]);
@@ -1405,17 +1474,19 @@ export default function AdaptableShadow() {
     // ฟังการเปลี่ยนสถานะล็อกอิน
     const unsubscribe = onAuth(async (currentUser) => {
       setUser(currentUser);
+      setAuthLoading(false);
       if (currentUser) {
         // ถ้าล็อกอินแล้ว ให้ลองดึงข้อมูลจาก Cloud มาทับ (ถ้ามี)
-        const cloudData = await loadUserData(currentUser.uid);
-        if (cloudData) {
-          if (cloudData.stats) { setStats(cloudData.stats); saveLS(LS_STATS, cloudData.stats); }
-          if (cloudData.ctx) { setCtx(cloudData.ctx); saveLS(LS_CTX, cloudData.ctx); }
-          if (cloudData.history) { saveLS(LS_HISTORY, cloudData.history); } // เซฟลง LS ไปก่อน หน้า History ค่อยดึง
-        } else {
-          // ถ้าเป็น user ใหม่บน Cloud ให้เอาของ Local ไปเซฟบน Cloud เลย
-          syncToCloud(currentUser.uid, stats, ctx, loadLS(LS_HISTORY, []));
-        }
+        try {
+          const cloudData = await loadUserData(currentUser.uid);
+          if (cloudData) {
+            if (cloudData.stats) { setStats(cloudData.stats); saveLS(LS_STATS, cloudData.stats); }
+            if (cloudData.ctx) { setCtx(cloudData.ctx); saveLS(LS_CTX, cloudData.ctx); }
+            if (cloudData.history) { saveLS(LS_HISTORY, cloudData.history); }
+          } else {
+            syncToCloud(currentUser.uid, stats, ctx, loadLS(LS_HISTORY, []));
+          }
+        } catch (e) { console.warn("Cloud load failed:", e); }
       }
     });
     return () => unsubscribe();
@@ -1427,7 +1498,9 @@ export default function AdaptableShadow() {
   };
 
   const handleLogin = async () => {
-    try { await loginWithGoogle(); } catch (e) { alert("Login failed: " + e.message); }
+    setLoginLoading(true);
+    try { await loginWithGoogle(); } catch (e) { alert("เข้าสู่ระบบไม่สำเร็จ: " + e.message); }
+    finally { setLoginLoading(false); }
   };
   const handleLogout = async () => {
     if (window.confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
@@ -1515,7 +1588,7 @@ export default function AdaptableShadow() {
   const hideHeader = page === "tracker" || page === "camera-permission" || page === "camera-preview" || page === "camera-guide";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000000", color: "#ffffff" }}>
+    <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}body{background:#000000;}
@@ -1526,59 +1599,63 @@ export default function AdaptableShadow() {
         @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         .fade-in{animation:fadeIn 0.4s ease forwards}
       `}</style>
-      <Scanline />
-      {!hideHeader && (
-        <div style={{ borderBottom: "1px solid #00ff8811", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", letterSpacing: "3px", color: "#00ff88", fontWeight: 700 }}>◆ THE ADAPTABLE SHADOW <span style={{ fontSize: '8px', opacity: 0.5 }}>[v2.1 - DIRECT AI]</span></div>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            {/* User Login Section */}
-            {user ? (
-              <button
-                onClick={handleLogout}
-                style={{ background: "#060810", border: "1px solid #00ff8844", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#00ff88", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "6px" }}
-              >
-                <img src={user.photoURL} alt="profile" style={{ width: "16px", height: "16px", borderRadius: "50%" }} referrerPolicy="no-referrer" />
-                {user.displayName?.split(" ")[0]}
-              </button>
-            ) : (
-              <button
-                onClick={handleLogin}
-                style={{ background: "linear-gradient(135deg, #00ff8833, #00cc6a22)", border: "2px solid #00ff88", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, color: "#00ff88", transition: "all 0.25s", boxShadow: "0 0 15px #00ff8844", letterSpacing: "1px" }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 25px #00ff8866'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 15px #00ff8844'; e.currentTarget.style.transform = 'scale(1)'; }}
-              >
-                ☁️ สมัครสมาชิก
-              </button>
-            )}
 
-            <button
-              onClick={() => { _soundEnabled = !_soundEnabled; setSoundEnabled(_soundEnabled); }}
-              style={{ background: "none", border: `1px solid ${soundEnabled ? "#00ff8844" : "#ffffff22"}`, borderRadius: "4px", padding: "4px 10px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "11px", color: soundEnabled ? "#00ff88" : "#ffffff44", transition: "all 0.2s" }}
-            >
-              {soundEnabled ? "🔊" : "🔇"}
-            </button>
-            <div style={{ display: "flex", gap: "8px" }}>
-              {["profile", "context", "plan"].map((p, i) => (
-                <div key={p} style={{ width: "8px", height: "8px", borderRadius: "50%", background: page === p ? "#00ff88" : ["profile", "context", "plan", "planning"].indexOf(page) > i ? "#00ff8844" : "#1a2a1a", boxShadow: page === p ? "0 0 8px #00ff88" : "none" }} />
-              ))}
+      {/* Auth Loading Screen */}
+      {authLoading ? (
+        <div style={{ minHeight: "100vh", background: "#000000", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px" }}>
+          <div style={{ width: "48px", height: "48px", border: "3px solid #00ff8833", borderTop: "3px solid #00ff88", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#00ff8866", letterSpacing: "3px" }}>LOADING...</div>
+        </div>
+      ) : !user ? (
+        /* Login Page — ยังไม่ได้ล็อกอิน */
+        <PageLogin onLogin={handleLogin} loading={loginLoading} />
+      ) : (
+        /* App หลัก — ล็อกอินแล้ว */
+        <div style={{ minHeight: "100vh", background: "#000000", color: "#ffffff" }}>
+          <Scanline />
+          {!hideHeader && (
+            <div style={{ borderBottom: "1px solid #00ff8811", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", letterSpacing: "3px", color: "#00ff88", fontWeight: 700 }}>◆ THE ADAPTABLE SHADOW <span style={{ fontSize: '8px', opacity: 0.5 }}>[v2.1 - DIRECT AI]</span></div>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                {/* User Profile */}
+                <button
+                  onClick={handleLogout}
+                  style={{ background: "#060810", border: "1px solid #00ff8844", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#00ff88", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <img src={user.photoURL} alt="profile" style={{ width: "16px", height: "16px", borderRadius: "50%" }} referrerPolicy="no-referrer" />
+                  {user.displayName?.split(" ")[0]}
+                </button>
+
+                <button
+                  onClick={() => { _soundEnabled = !_soundEnabled; setSoundEnabled(_soundEnabled); }}
+                  style={{ background: "none", border: `1px solid ${soundEnabled ? "#00ff8844" : "#ffffff22"}`, borderRadius: "4px", padding: "4px 10px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "11px", color: soundEnabled ? "#00ff88" : "#ffffff44", transition: "all 0.2s" }}
+                >
+                  {soundEnabled ? "🔊" : "🔇"}
+                </button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {["profile", "context", "plan"].map((p, i) => (
+                    <div key={p} style={{ width: "8px", height: "8px", borderRadius: "50%", background: page === p ? "#00ff88" : ["profile", "context", "plan", "planning"].indexOf(page) > i ? "#00ff8844" : "#1a2a1a", boxShadow: page === p ? "0 0 8px #00ff88" : "none" }} />
+                  ))}
+                </div>
+              </div>
             </div>
+          )}
+          <div className="fade-in" key={page}>
+            {page === "profile" && <PageProfile stats={stats} setStats={setStats} onNext={() => setPage("context")} hasLastPlan={!!loadLS(LS_LAST_PLAN, null)} onQuickStart={handleQuickStart} />}
+            {page === "context" && <PageContext ctx={ctx} setCtx={setCtx} onBack={() => setPage("profile")} onAnalyze={handleAnalyze} loading={loading} error={planError} />}
+            {page === "planning" && <PagePlanning />}
+            {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setGuidedQueue([]); setPage("tutorial"); }} onStartGuided={handleStartGuided} onBack={() => setPage("context")} onHistory={() => setPage("history")} onDashboard={() => setPage("dashboard")} />}
+            {page === "tutorial" && plan && <PageVideoTutorial exercise={exercise} onNext={() => setPage("camera-guide")} onBack={() => setPage("plan")} />}
+            {page === "camera-guide" && plan && <PageCameraGuide exercise={exercise} onNext={() => { setCameraStream(null); setPage("camera-permission"); }} onBack={() => setPage("tutorial")} />}
+            {page === "camera-permission" && plan && <PageCameraPermission exercise={exercise} plan={plan} onGranted={stream => { setCameraStream(stream); setPage("camera-preview"); }} onBack={() => setPage("camera-guide")} />}
+            {page === "camera-preview" && plan && <PageCameraPreview exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} onStart={() => setPage("tracker")} onBack={() => { stopCamera(); setPage("camera-permission"); }} />}
+            {page === "tracker" && plan && <PageTracker exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} weightKg={stats.weight} onDone={handleDone} onFinish={() => { stopCamera(); setPage("plan"); }} />}
+            {page === "summary" && workoutResult && <PageSummary result={workoutResult} stats={stats} onPlayAgain={() => setPage("plan")} onBack={() => setPage("plan")} />}
+            {page === "history" && <PageHistory onBack={() => setPage("plan")} stats={stats} />}
+            {page === "dashboard" && <PageDashboard onBack={() => setPage("plan")} />}
           </div>
         </div>
       )}
-      <div className="fade-in" key={page}>
-        {page === "profile" && <PageProfile stats={stats} setStats={setStats} onNext={() => setPage("context")} hasLastPlan={!!loadLS(LS_LAST_PLAN, null)} onQuickStart={handleQuickStart} />}
-        {page === "context" && <PageContext ctx={ctx} setCtx={setCtx} onBack={() => setPage("profile")} onAnalyze={handleAnalyze} loading={loading} error={planError} />}
-        {page === "planning" && <PagePlanning />}
-        {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setGuidedQueue([]); setPage("tutorial"); }} onStartGuided={handleStartGuided} onBack={() => setPage("context")} onHistory={() => setPage("history")} onDashboard={() => setPage("dashboard")} />}
-        {page === "tutorial" && plan && <PageVideoTutorial exercise={exercise} onNext={() => setPage("camera-guide")} onBack={() => setPage("plan")} />}
-        {page === "camera-guide" && plan && <PageCameraGuide exercise={exercise} onNext={() => { setCameraStream(null); setPage("camera-permission"); }} onBack={() => setPage("tutorial")} />}
-        {page === "camera-permission" && plan && <PageCameraPermission exercise={exercise} plan={plan} onGranted={stream => { setCameraStream(stream); setPage("camera-preview"); }} onBack={() => setPage("camera-guide")} />}
-        {page === "camera-preview" && plan && <PageCameraPreview exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} onStart={() => setPage("tracker")} onBack={() => { stopCamera(); setPage("camera-permission"); }} />}
-        {page === "tracker" && plan && <PageTracker exercise={exercise} plan={plan} mediapipeReady={mediapipeReady} initialStream={cameraStream} weightKg={stats.weight} onDone={handleDone} onFinish={() => { stopCamera(); setPage("plan"); }} />}
-        {page === "summary" && workoutResult && <PageSummary result={workoutResult} stats={stats} onPlayAgain={() => setPage("plan")} onBack={() => setPage("plan")} />}
-        {page === "history" && <PageHistory onBack={() => setPage("plan")} stats={stats} />}
-        {page === "dashboard" && <PageDashboard onBack={() => setPage("plan")} />}
-      </div>
-    </div>
+    </>
   );
 }
