@@ -133,34 +133,33 @@ async function fetchAIPlan(stats, ctx) {
 
 // เอฟเฟกต์ตกแต่งสไตล์ Cyberpunk (เส้นสแกนจอ)
 function Scanline() {
-  return <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,0.015) 2px,rgba(0,255,136,0.015) 4px)" }} />;
+  return <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,0.012) 2px,rgba(0,255,136,0.012) 4px)" }} />;
 }
 
 // [หน้า Login] หน้าจอล็อกอินเต็มหน้าจอ — ต้องล็อกอินก่อนใช้งาน
 function PageLogin({ onLogin, loading }) {
   return (
-    <div style={{ minHeight: "100vh", background: "#000000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", position: "relative", overflow: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", position: "relative", overflow: "hidden" }}>
       <Scanline />
-      {/* Background glow effect */}
-      <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: "radial-gradient(circle, #00ff8815, transparent 70%)", top: "10%", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", width: "300px", height: "300px", borderRadius: "50%", background: "radial-gradient(circle, #00bfff10, transparent 70%)", bottom: "15%", right: "10%", pointerEvents: "none" }} />
+      {/* Background glow */}
+      <div style={{ position: "absolute", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, #00ff8810, transparent 70%)", top: "5%", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: "radial-gradient(circle, #00bfff08, transparent 70%)", bottom: "10%", right: "5%", pointerEvents: "none" }} />
 
       {/* Logo */}
       <div style={{ marginBottom: "48px", textAlign: "center", zIndex: 1 }}>
-        <div style={{ fontSize: "64px", marginBottom: "24px", animation: "pulse 2s ease-in-out infinite" }}>◆</div>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "6px", color: "#00ff8866", marginBottom: "16px" }}>// WELCOME TO</div>
-        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(28px,6vw,48px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.1, margin: 0 }}>
+        <div style={{ fontSize: "56px", marginBottom: "24px", color: "#00ff88", animation: "pulse 2.5s ease-in-out infinite" }}>◆</div>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "6px", color: "#ffffff33", marginBottom: "16px" }}>WELCOME TO</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(26px,6vw,44px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>
           THE ADAPTABLE<br /><span style={{ color: "#00ff88" }}>SHADOW</span>
         </h1>
         <p style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffff44", marginTop: "16px", lineHeight: 1.8, maxWidth: "360px" }}>
-          AI Personal Trainer ที่ปรับตัวตามคุณ<br />
-          วิเคราะห์ท่า real-time ด้วย Computer Vision
+          AI Workout Tracker ที่ปรับตัวตามคุณ
         </p>
       </div>
 
       {/* Login Card */}
-      <div style={{ background: "#0d1a0d", border: "1px solid #00ff8833", borderRadius: "16px", padding: "40px 32px", maxWidth: "420px", width: "100%", textAlign: "center", zIndex: 1, boxShadow: "0 0 60px #00ff8810" }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "3px", color: "#00ff8899", marginBottom: "24px" }}>🔐  เข้าสู่ระบบเพื่อเริ่มต้น</div>
+      <div style={{ background: "#12141d", border: "1px solid #00ff8822", borderRadius: "16px", padding: "36px 28px", maxWidth: "400px", width: "100%", textAlign: "center", zIndex: 1, boxShadow: "0 8px 40px rgba(0,0,0,0.4)" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "3px", color: "#00ff8888", marginBottom: "24px" }}>🔐  เข้าสู่ระบบเพื่อเริ่มต้น</div>
 
         {/* Google Login Button */}
         <button
@@ -171,6 +170,7 @@ function PageLogin({ onLogin, loading }) {
             cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px",
             fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, color: "#1a1a1a",
             transition: "all 0.25s", boxShadow: "0 4px 20px rgba(0,0,0,0.3)", opacity: loading ? 0.6 : 1,
+            minHeight: "52px",
           }}
           onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 30px rgba(0,0,0,0.4)'; } }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)'; }}
@@ -185,20 +185,19 @@ function PageLogin({ onLogin, loading }) {
         </button>
 
         {/* Feature badges */}
-        <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap", marginTop: "28px" }}>
+        <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap", marginTop: "24px" }}>
           {["☁️ Cloud Sync", "🤖 AI Trainer", "📷 Pose Detection"].map(t => (
-            <span key={t} style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", padding: "5px 10px", background: "#060810", border: "1px solid #00ff8822", borderRadius: "20px", color: "#00ff8877", letterSpacing: "1px" }}>{t}</span>
+            <span key={t} style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", padding: "5px 10px", background: "#0d0f18", border: "1px solid #ffffff11", borderRadius: "20px", color: "#ffffff55", letterSpacing: "1px" }}>{t}</span>
           ))}
         </div>
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: "40px", textAlign: "center", zIndex: 1 }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff22", letterSpacing: "2px" }}>POWERED BY AI + MEDIAPIPE</div>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff11", marginTop: "8px" }}>v2.1 — DIRECT AI</div>
+      <div style={{ marginTop: "48px", textAlign: "center", zIndex: 1 }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff18", letterSpacing: "2px" }}>POWERED BY AI + MEDIAPIPE</div>
       </div>
 
-      <style>{`@keyframes pulse{0%,100%{opacity:1;text-shadow:0 0 20px #00ff88}50%{opacity:0.6;text-shadow:0 0 40px #00ff88}}`}</style>
+      <style>{`@keyframes pulse{0%,100%{opacity:1;text-shadow:0 0 20px #00ff88}50%{opacity:0.5;text-shadow:0 0 50px #00ff88}}`}</style>
     </div>
   );
 }
@@ -263,51 +262,51 @@ function ModeChip({ mode }) {
 
 // [หน้า 1] รับข้อมูลร่างกายเบื้องต้นเพื่อส่งให้ AI ประเมิน
 function PageProfile({ stats, setStats, onNext, onQuickStart, hasLastPlan }) {
-  // ฟังก์ชัน: คำนวณไขมันอัตโนมัติจาก BMI (สูตร Deurenberg)
   const estimateBodyFat = () => {
     const bmi = stats.weight / (stats.height / 100) ** 2;
-    // สูตรประมาณ: BF% = 1.2 × BMI + 0.23 × อายุ - 5.4 (ใช้อายุ 25 เป็น default)
     const estimated = Math.round((1.2 * bmi + 0.23 * 25 - 5.4) * 10) / 10;
-    const clamped = Math.max(5, Math.min(50, estimated));
-    setStats(s => ({ ...s, bodyFat: clamped }));
+    setStats(s => ({ ...s, bodyFat: Math.max(5, Math.min(50, estimated)) }));
   };
 
   return (
-    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "40px 24px" }}>
-      <div style={{ marginBottom: "48px" }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#00ff8866", marginBottom: "12px" }}>//  ขั้นตอน 01 — ข้อมูลร่างกาย</div>
-        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(28px,5vw,42px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.1, margin: 0 }}>คุณ<br /><span style={{ color: "#00ff88" }}>เป็นใคร?</span></h1>
-        <p style={{ color: "#ffffff55", fontFamily: "'Space Mono',monospace", fontSize: "12px", marginTop: "16px", lineHeight: 1.8 }}>ข้อมูลนี้จะส่งให้ AI วิเคราะห์<br />เพื่อออกแบบโปรแกรมเฉพาะตัวคุณ</p>
+    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "32px 20px" }}>
+      <div style={{ marginBottom: "32px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "4px", color: "#00ff8855", marginBottom: "10px" }}>ขั้นตอน 1/2</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>ข้อมูล<span style={{ color: "#00ff88" }}>ของคุณ</span></h1>
+        <p style={{ color: "#ffffff44", fontFamily: "'Space Mono',monospace", fontSize: "11px", marginTop: "12px", lineHeight: 1.8 }}>AI จะใช้ข้อมูลนี้ออกแบบโปรแกรมเฉพาะตัว</p>
       </div>
+
       {/* ชื่อเล่น */}
-      <div style={{ marginBottom: "20px", background: "#0d1a0d", border: "1px solid #00ff8822", borderRadius: "8px", padding: "20px" }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#00ff8899", textTransform: "uppercase", marginBottom: "10px" }}>👤  ชื่อเล่น / Nickname</div>
+      <div style={{ marginBottom: "16px", background: "#12141d", border: "1px solid #ffffff11", borderRadius: "12px", padding: "20px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "2px", color: "#00ff8877", textTransform: "uppercase", marginBottom: "10px" }}>👤 ชื่อเล่น</div>
         <input
           value={stats.nickname || ""}
           onChange={e => setStats(s => ({ ...s, nickname: e.target.value }))}
-          placeholder="บอกชื่อของคุณ... เช่น: เบสท์, พี่, เบนซ์"
-          style={{ width: "100%", background: "#060810", border: "1px solid #00ff8833", borderRadius: "4px", padding: "10px 14px", color: "#00ff88", fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, outline: "none", boxSizing: "border-box", letterSpacing: "1px" }}
+          placeholder="เช่น: เบสท์, พี่มาร์ค, เบนซ์"
+          style={{ width: "100%", background: "#0d0f18", border: "1px solid #ffffff15", borderRadius: "8px", padding: "12px 14px", color: "#00ff88", fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, outline: "none", boxSizing: "border-box" }}
         />
       </div>
-      <div style={{ background: "#0d1a0d", border: "1px solid #00ff8822", borderRadius: "8px", padding: "32px" }}>
+
+      {/* Body Stats */}
+      <div style={{ background: "#12141d", border: "1px solid #ffffff11", borderRadius: "12px", padding: "24px" }}>
         <StatInput label="น้ำหนัก" value={stats.weight} onChange={v => setStats(s => ({ ...s, weight: v }))} min={40} max={150} step={0.5} unit="kg" />
         <StatInput label="ส่วนสูง" value={stats.height} onChange={v => setStats(s => ({ ...s, height: v }))} min={140} max={220} unit="cm" />
         <StatInput label="ไขมันในร่างกาย" value={stats.bodyFat} onChange={v => setStats(s => ({ ...s, bodyFat: v }))} min={5} max={50} step={0.5} unit="%" />
-        {/* ปุ่ม: ไม่ทราบค่าไขมัน → ประมาณจาก BMI ให้ */}
         <button
           onClick={estimateBodyFat}
-          style={{ width: "100%", marginTop: "12px", padding: "14px 16px", background: "linear-gradient(135deg, #ffd70022, #ff980022)", border: "2px solid #ffd70066", borderRadius: "8px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "13px", fontWeight: 700, color: "#ffd700", letterSpacing: "1px", transition: "all 0.25s", boxShadow: "0 0 20px #ffd70033" }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#ffd70033'; e.currentTarget.style.boxShadow = '0 0 30px #ffd70055'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, #ffd70022, #ff980022)'; e.currentTarget.style.boxShadow = '0 0 20px #ffd70033'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          style={{ width: "100%", marginTop: "8px", padding: "12px 16px", background: "#ffd70011", border: "1px solid #ffd70033", borderRadius: "8px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "12px", fontWeight: 700, color: "#ffd700", transition: "all 0.2s", minHeight: "48px" }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#ffd70022'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#ffd70011'; }}
         >
-          🔍 ไม่รู้ค่าไขมัน? กดเลย — AI ประมาณให้จาก BMI
+          🔍 ประมาณค่าไขมันให้
         </button>
-        <div style={{ marginTop: "12px", padding: "16px", background: "#060810", borderRadius: "4px", border: "1px solid #00ff8811" }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+        {/* BMI Summary */}
+        <div style={{ marginTop: "16px", padding: "14px", background: "#0d0f18", borderRadius: "8px", border: "1px solid #ffffff08" }}>
+          <div style={{ display: "flex", justifyContent: "space-around" }}>
             {[["BMI", (stats.weight / (stats.height / 100) ** 2).toFixed(1)], ["ไขมัน", (stats.weight * stats.bodyFat / 100).toFixed(1) + "kg"], ["กล้าม", (stats.weight * (1 - stats.bodyFat / 100)).toFixed(1) + "kg"]].map(([k, v]) => (
               <div key={k} style={{ textAlign: "center" }}>
                 <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "18px", fontWeight: 700, color: "#ffd700" }}>{v}</div>
-                <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff44", letterSpacing: "1px", marginTop: "4px" }}>{k}</div>
+                <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff33", letterSpacing: "1px", marginTop: "4px" }}>{k}</div>
               </div>
             ))}
           </div>
@@ -315,25 +314,21 @@ function PageProfile({ stats, setStats, onNext, onQuickStart, hasLastPlan }) {
       </div>
 
       {/* เป้าหมายวันนี้ */}
-      <div style={{ marginTop: "24px", background: "#0d1a0d", border: "1px solid #ffd70033", borderRadius: "8px", padding: "24px" }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#ffd70099", marginBottom: "12px" }}>🎯  เป้าหมายวันนี้</div>
+      <div style={{ marginTop: "16px", background: "#12141d", border: "1px solid #ffffff11", borderRadius: "12px", padding: "20px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "2px", color: "#ffd70088", marginBottom: "10px" }}>🎯 เป้าหมายวันนี้</div>
         <textarea
           value={stats.goal || ""}
           onChange={e => setStats(s => ({ ...s, goal: e.target.value }))}
-          rows={3}
-          placeholder="บอก AI ว่าคุณต้องการอะไรวันนี้... เช่น: อยากลดพุง, เสริมแขน, อยากฝึกความอดทน"
-          style={{ width: "100%", background: "#060810", border: "1px solid #ffd70033", borderRadius: "4px", padding: "12px 14px", color: "#ffd700", fontFamily: "'Space Mono',monospace", fontSize: "12px", outline: "none", boxSizing: "border-box", resize: "vertical", lineHeight: 1.7 }}
+          rows={2}
+          placeholder="เช่น: อยากลดพุง, เสริมแขน, ฝึกความอดทน"
+          style={{ width: "100%", background: "#0d0f18", border: "1px solid #ffffff15", borderRadius: "8px", padding: "12px 14px", color: "#ffd700", fontFamily: "'Space Mono',monospace", fontSize: "12px", outline: "none", boxSizing: "border-box", resize: "vertical", lineHeight: 1.7 }}
         />
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff33", marginTop: "8px" }}>
-          AI จะนำเป้าหมายนี้ไปปรับแผนและคำพูดกระตุ้นใจให้ตรงกับคุณโดยเฉพาะ
-        </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "32px" }}>
-        <GlowButton onClick={onNext} style={{ width: "100%" }}>ถัดไป →</GlowButton>
-        {/* Quick Start: ถ้ามีแผนเก่า สามารถกดเริ่มเลย */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "28px" }}>
+        <GlowButton onClick={onNext} style={{ width: "100%", minHeight: "52px" }}>วิเคราะห์ร่างกาย →</GlowButton>
         {hasLastPlan && (
-          <GlowButton variant="ghost" onClick={onQuickStart} style={{ width: "100%", borderColor: "#ffd70044", color: "#ffd700" }}>⚡ เริ่มออกกำลังเลย (แผนเดิม)</GlowButton>
+          <GlowButton variant="ghost" onClick={onQuickStart} style={{ width: "100%", borderColor: "#ffd70044", color: "#ffd700", minHeight: "52px" }}>⚡ เริ่มออกกำลังเลย (แผนเดิม)</GlowButton>
         )}
       </div>
     </div>
@@ -345,63 +340,53 @@ function PageContext({ ctx, setCtx, onBack, onAnalyze, loading, error }) {
   const fatigueLevels = FATIGUE_LEVELS;
   const current = fatigueLevels.find(f => f.level === ctx.fatigue) || fatigueLevels[4];
   return (
-    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "40px 24px" }}>
-      <div style={{ marginBottom: "40px" }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#00ff8866", marginBottom: "12px" }}>//  ขั้นตอน 02 — บริบทวันนี้</div>
-        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(28px,5vw,42px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.1, margin: 0 }}>วันนี้<br /><span style={{ color: "#00ff88" }}>เป็นยังไง?</span></h1>
+    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "32px 20px" }}>
+      <div style={{ marginBottom: "28px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "4px", color: "#00ff8855", marginBottom: "10px" }}>ขั้นตอน 2/2</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>วันนี้<span style={{ color: "#00ff88" }}>เป็นยังไง?</span></h1>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* ความเหนื่อยล้า — 9 ระดับ */}
-        <div style={{ background: "#0d1a0d", border: "1px solid #00ff8822", borderRadius: "8px", padding: "24px" }}>
-          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#00ff8899", textTransform: "uppercase", marginBottom: "12px" }}>💪  ความเหนื่อยล้า — <span style={{ color: current.color, fontWeight: 700 }}>{current.label}</span></div>
-          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: current.color, fontWeight: 700, textAlign: "center", marginBottom: "16px", padding: "10px", background: `${current.color}11`, border: `1px solid ${current.color}33`, borderRadius: "4px" }}>
-            ระดับ {current.level}: {current.sets} SET × {current.reps} REP
+        {/* ความเหนื่อยล้า — Slider */}
+        <div style={{ background: "#12141d", border: "1px solid #ffffff11", borderRadius: "12px", padding: "24px" }}>
+          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "2px", color: "#00ff8877", textTransform: "uppercase", marginBottom: "16px" }}>💪 ระดับพลังงานวันนี้</div>
+          {/* Live display */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", padding: "16px", background: `${current.color}08`, border: `1px solid ${current.color}22`, borderRadius: "10px" }}>
+            <div>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "20px", fontWeight: 700, color: current.color }}>{current.label}</div>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44", marginTop: "4px" }}>ระดับ {current.level}/9</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "28px", fontWeight: 700, color: current.color }}>{current.sets}×{current.reps}</div>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff33", marginTop: "2px" }}>SET × REP</div>
+            </div>
           </div>
-          {/* Grid 3×3 ให้เลือก */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
-            {fatigueLevels.map(f => {
-              const isActive = ctx.fatigue === f.level;
-              return (
-                <button
-                  key={f.level}
-                  onClick={() => setCtx(c => ({ ...c, fatigue: f.level }))}
-                  style={{
-                    background: isActive ? `${f.color}22` : "#060810",
-                    border: `1px solid ${isActive ? f.color : "#ffffff11"}`,
-                    borderRadius: "6px",
-                    padding: "10px 4px",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    textAlign: "center",
-                    boxShadow: isActive ? `0 0 12px ${f.color}33` : "none",
-                  }}
-                >
-                  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "13px", fontWeight: 700, color: isActive ? f.color : "#ffffff66" }}>{f.level}</div>
-                  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: isActive ? f.color : "#ffffff33", marginTop: "2px" }}>{f.sets}×{f.reps}</div>
-                  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "8px", color: isActive ? "#ffffffaa" : "#ffffff22", marginTop: "2px" }}>{f.label}</div>
-                </button>
-              );
-            })}
-          </div>
-          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff33", marginTop: "12px", textAlign: "center", lineHeight: 1.6 }}>
-            1 = พลังเต็ม (3 SET × 12 REP) → 9 = หมดสภาพ (1 SET × 6 REP)
+          {/* Slider */}
+          <input
+            type="range" min="1" max="9" step="1" value={ctx.fatigue}
+            onChange={e => setCtx(c => ({ ...c, fatigue: Number(e.target.value) }))}
+            style={{ width: "100%", height: "8px", borderRadius: "4px", background: `linear-gradient(to right, #00ff88, #ffd700, #ff4444)`, cursor: "pointer", outline: "none", WebkitAppearance: "none", appearance: "none" }}
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+            <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#00ff8877" }}>พลังเต็ม</span>
+            <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ff444477" }}>หมดสภาพ</span>
           </div>
         </div>
-        {[{ key: "calendar", label: "📅  ตารางงานวันนี้", placeholder: "เช่น: ประชุม 3 ชม., ว่าง..." },
-        { key: "location", label: "📍  สถานที่", placeholder: "เช่น: บ้าน, ออฟฟิศ, ยิม..." },
-        { key: "weather", label: "🌤  สภาพอากาศ", placeholder: "เช่น: ร้อน, ฝนตก, แดดจ้า..." }
+        {/* Context inputs */}
+        {[{ key: "calendar", label: "📅 ตารางงาน", placeholder: "เช่น: ประชุม 3 ชม., ว่าง..." },
+        { key: "location", label: "📍 สถานที่", placeholder: "เช่น: บ้าน, ออฟฟิศ, ยิม..." },
+        { key: "weather", label: "🌤 อากาศ", placeholder: "เช่น: ร้อน, ฝนตก, แดดจ้า..." }
         ].map(({ key, label, placeholder }) => (
-          <div key={key} style={{ background: "#0d1a0d", border: "1px solid #00ff8822", borderRadius: "8px", padding: "20px" }}>
-            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#00ff8899", textTransform: "uppercase", marginBottom: "10px" }}>{label}</div>
+          <div key={key} style={{ background: "#12141d", border: "1px solid #ffffff11", borderRadius: "12px", padding: "18px 20px" }}>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "2px", color: "#00ff8877", marginBottom: "10px" }}>{label}</div>
             <input value={ctx[key]} onChange={e => setCtx(c => ({ ...c, [key]: e.target.value }))} placeholder={placeholder}
-              style={{ width: "100%", background: "#060810", border: "1px solid #00ff8833", borderRadius: "4px", padding: "10px 14px", color: "#ffffff", fontFamily: "'Space Mono',monospace", fontSize: "13px", outline: "none", boxSizing: "border-box" }} />
+              style={{ width: "100%", background: "#0d0f18", border: "1px solid #ffffff15", borderRadius: "8px", padding: "12px 14px", color: "#ffffff", fontFamily: "'Space Mono',monospace", fontSize: "13px", outline: "none", boxSizing: "border-box" }} />
           </div>
         ))}
       </div>
-      {error && <div style={{ marginTop: "16px", padding: "12px", background: "#ff336622", border: "1px solid #ff3366", borderRadius: "4px", color: "#ff6688", fontFamily: "'Space Mono',monospace", fontSize: "12px" }}>{error}</div>}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "32px" }}>
-        <GlowButton variant="ghost" onClick={onBack}>← กลับ</GlowButton>
-        <GlowButton onClick={onAnalyze} disabled={loading}>{loading ? "กำลังวิเคราะห์..." : "วิเคราะห์แผน ⚡"}</GlowButton>
+      {error && <div style={{ marginTop: "16px", padding: "12px", background: "#ff336615", border: "1px solid #ff336644", borderRadius: "8px", color: "#ff6688", fontFamily: "'Space Mono',monospace", fontSize: "12px" }}>{error}</div>}
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", gap: "12px" }}>
+        <GlowButton variant="ghost" onClick={onBack} style={{ minHeight: "52px" }}>← กลับ</GlowButton>
+        <GlowButton onClick={onAnalyze} disabled={loading} style={{ flex: 1, minHeight: "52px" }}>{loading ? "กำลังวิเคราะห์..." : "สร้างแผน AI ⚡"}</GlowButton>
       </div>
     </div>
   );
@@ -1591,27 +1576,28 @@ export default function AdaptableShadow() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0;}body{background:#000000;}
+        *{box-sizing:border-box;margin:0;padding:0;}body{background:#0a0a0f;}
         input[type=range]{-webkit-appearance:none;appearance:none;}
-        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:#00ff88;border-radius:50%;box-shadow:0 0 10px #00ff88;cursor:pointer;}
-        ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:#000000;}::-webkit-scrollbar-thumb{background:#00ff8844;border-radius:2px;}
+        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:#00ff88;border-radius:50%;box-shadow:0 0 12px #00ff8888;cursor:pointer;margin-top:-6px;}
+        input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;}
+        ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:#0a0a0f;}::-webkit-scrollbar-thumb{background:#00ff8833;border-radius:2px;}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        .fade-in{animation:fadeIn 0.4s ease forwards}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .fade-in{animation:fadeIn 0.3s ease forwards}
       `}</style>
 
       {/* Auth Loading Screen */}
       {authLoading ? (
-        <div style={{ minHeight: "100vh", background: "#000000", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px" }}>
-          <div style={{ width: "48px", height: "48px", border: "3px solid #00ff8833", borderTop: "3px solid #00ff88", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#00ff8866", letterSpacing: "3px" }}>LOADING...</div>
+        <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px" }}>
+          <div style={{ width: "40px", height: "40px", border: "3px solid #ffffff11", borderTop: "3px solid #00ff88", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+          <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff33", letterSpacing: "3px" }}>กำลังโหลด...</div>
         </div>
       ) : !user ? (
         /* Login Page — ยังไม่ได้ล็อกอิน */
         <PageLogin onLogin={handleLogin} loading={loginLoading} />
       ) : (
         /* App หลัก — ล็อกอินแล้ว */
-        <div style={{ minHeight: "100vh", background: "#000000", color: "#ffffff" }}>
+        <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#ffffff" }}>
           <Scanline />
           {!hideHeader && (
             <div style={{ borderBottom: "1px solid #00ff8811", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
