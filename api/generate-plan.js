@@ -4,26 +4,32 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { stats, ctx } = req.body;
+  const { stats, ctx, targetSets, targetReps } = req.body;
   if (!stats || !ctx) {
     return res.status(400).json({ message: 'Missing stats or ctx in request body' });
   }
+
+  // ใช้ค่า sets/reps ที่ frontend ส่งมา (ตาม fatigue level ที่ user เลือก)
+  const sets = targetSets || 2;
+  const reps = targetReps || 10;
 
   const bmi = (stats.weight / (stats.height / 100) ** 2).toFixed(1);
   const prompt = `คุณคือ AI Personal Trainer ชื่อ "The Adaptable Shadow"
 ตอบกลับเป็น JSON เท่านั้น ไม่มีข้อความอื่นนอกจาก JSON บริสุทธิ์
 ข้อมูลผู้ใช้: น้ำหนัก ${stats.weight}kg, ส่วนสูง ${stats.height}cm, ไขมัน ${stats.bodyFat}%, BMI ${bmi}
 เป้าหมายของผู้ใช้วันนี้: "${stats.goal || 'ออกกำลังให้สุขภาพดี'}"
-บริบท: เหนื่อยล้า ${ctx.fatigue}/10, สถานที่="${ctx.location}", อากาศ="${ctx.weather}"
-กฎการตัดสิน:
-- เหนื่อยล้า>=7 หรือมีคำว่า ประชุม/ยุ่ง/งานเร่ง → mode="micro" (แค่ sets 2 reps 8-10)
-- เหนื่อยล้า 4-6 → mode="moderate" (sets 3 reps 12-15)
-- เหนื่อยล้า 1-3 และว่าง → mode="full" (sets 4 reps 20+)
-- ไขมัน<18% → reps+20% / ไขมัน>25% → reps-15%
-- เป้าหมายผู้ใช้: ปรับท่าออกกำลังและสารใน message/motivation ให้ตรงกับเป้าหมายนี้
+บริบท: เหนื่อยล้า ${ctx.fatigue}/9, สถานที่="${ctx.location}", อากาศ="${ctx.weather}"
+
+กฎสำคัญที่สุด — ห้ามฝ่าฝืน:
+- ผู้ใช้กำหนดไว้แล้วว่า sets=${sets} และ reps=${reps} ทุกท่าที่นับ reps ต้องใช้ค่านี้เท่านั้น ห้ามเปลี่ยนโดยเด็ดขาด!
+- plank ใช้ sets=${sets} hold_sec ตามสมควร (15-60 วินาที)
+- rest_sec ปรับได้ตามความเหมาะสม (20-90 วินาที)
+- เลือก mode จากจำนวน sets: sets>=3 → "full", sets=2 → "moderate", sets=1 → "micro"
+- เป้าหมายผู้ใช้: ปรับสารใน message/motivation ให้ตรงกับเป้าหมายนี้
+
 ท่าออกกำลัง: pushup(นับ reps), squat(นับ reps), plank(นับวินาที hold_sec), lunge(นับ reps), situp(นับ reps), jumpingjack(นับ reps)
 ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
-{"mode":"micro","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":2,"reps":10,"rest_sec":45},"squat":{"sets":2,"reps":12,"rest_sec":45},"plank":{"sets":2,"hold_sec":30,"rest_sec":30},"lunge":{"sets":2,"reps":10,"rest_sec":45},"situp":{"sets":2,"reps":15,"rest_sec":45},"jumpingjack":{"sets":2,"reps":20,"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
+{"mode":"moderate","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":${sets},"reps":${reps},"rest_sec":45},"squat":{"sets":${sets},"reps":${reps},"rest_sec":45},"plank":{"sets":${sets},"hold_sec":30,"rest_sec":30},"lunge":{"sets":${sets},"reps":${reps},"rest_sec":45},"situp":{"sets":${sets},"reps":${reps},"rest_sec":45},"jumpingjack":{"sets":${sets},"reps":${reps},"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
 
   // ดึง API Key จาก Environment Variables ของ Vercel
   const GROQ_KEY = process.env.GROQ_API_KEY;
@@ -86,7 +92,24 @@ export default async function handler(req, res) {
         return res.status(500).json({ message: "🤖 AI ตอบกลับมาไม่ถูกรูปแบบ กรุณาลองใหม่อีกครั้ง" });
       }
 
-      return res.status(200).json(JSON.parse(match[0]));
+      const plan = JSON.parse(match[0]);
+
+      // ============================================================
+      // Safety Net: Force override sets/reps ให้ตรงกับที่ user กำหนด
+      // ป้องกัน AI ดื้อไม่ทำตามคำสั่ง
+      // ============================================================
+      const repExercises = ['pushup', 'squat', 'lunge', 'situp', 'jumpingjack'];
+      repExercises.forEach(ex => {
+        if (plan[ex]) {
+          plan[ex].sets = sets;
+          plan[ex].reps = reps;
+        }
+      });
+      if (plan.plank) {
+        plan.plank.sets = sets;
+      }
+
+      return res.status(200).json(plan);
 
     } catch (error) {
       console.error(`[Attempt ${attempt + 1}] Error:`, error.message);

@@ -77,14 +77,34 @@ const LM = {
 };
 function lm(landmarks, idx) { return [landmarks[idx].x, landmarks[idx].y]; }
 
+// ============================================================================
+// 1.5 ตาราง Fatigue Levels (ใช้ร่วมกันทั้ง UI และ API)
+// ============================================================================
+const FATIGUE_LEVELS = [
+  { level: 1, label: "พลังเต็ม", sets: 3, reps: 12, color: "#00ff88" },
+  { level: 2, label: "สดใส", sets: 3, reps: 10, color: "#00ff88" },
+  { level: 3, label: "พร้อม", sets: 3, reps: 8, color: "#66ff99" },
+  { level: 4, label: "ปกติ", sets: 2, reps: 10, color: "#ffd700" },
+  { level: 5, label: "เริ่มเหนื่อย", sets: 2, reps: 8, color: "#ffd700" },
+  { level: 6, label: "เหนื่อย", sets: 2, reps: 6, color: "#ff9800" },
+  { level: 7, label: "เหนื่อยมาก", sets: 1, reps: 10, color: "#ff6633" },
+  { level: 8, label: "หมดแรง", sets: 1, reps: 8, color: "#ff4444" },
+  { level: 9, label: "หมดสภาพ", sets: 1, reps: 6, color: "#ff3366" },
+];
+
 // ฟังก์ชันเรียกขอแผนออกกำลังกายจาก Gemini ผ่าน Backend (server.js / Vercel API Route)
 async function fetchAIPlan(stats, ctx) {
   console.log("Fetching AI plan from Backend...");
 
+  // หาค่า sets/reps ตามระดับความเหนื่อยล้าที่ user เลือก
+  const fatigueLevel = FATIGUE_LEVELS.find(f => f.level === ctx.fatigue) || FATIGUE_LEVELS[4];
+  const targetSets = fatigueLevel.sets;
+  const targetReps = fatigueLevel.reps;
+
   const res = await fetch('/api/generate-plan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ stats, ctx })
+    body: JSON.stringify({ stats, ctx, targetSets, targetReps })
   });
 
   if (!res.ok) {
@@ -95,13 +115,13 @@ async function fetchAIPlan(stats, ctx) {
 
   const plan = await res.json();
 
-  // ใส่ค่า default ถ้า Gemini ตอบไม่ครบ
-  if (!plan.pushup) plan.pushup = { sets: 2, reps: 10, rest_sec: 45 };
-  if (!plan.squat) plan.squat = { sets: 2, reps: 12, rest_sec: 45 };
-  if (!plan.plank) plan.plank = { sets: 2, hold_sec: 30, rest_sec: 30 };
-  if (!plan.lunge) plan.lunge = { sets: 2, reps: 10, rest_sec: 45 };
-  if (!plan.situp) plan.situp = { sets: 2, reps: 15, rest_sec: 45 };
-  if (!plan.jumpingjack) plan.jumpingjack = { sets: 2, reps: 20, rest_sec: 30 };
+  // ใส่ค่า default ถ้า Gemini ตอบไม่ครบ (ใช้ค่าจาก fatigue level)
+  if (!plan.pushup) plan.pushup = { sets: targetSets, reps: targetReps, rest_sec: 45 };
+  if (!plan.squat) plan.squat = { sets: targetSets, reps: targetReps, rest_sec: 45 };
+  if (!plan.plank) plan.plank = { sets: targetSets, hold_sec: 30, rest_sec: 30 };
+  if (!plan.lunge) plan.lunge = { sets: targetSets, reps: targetReps, rest_sec: 45 };
+  if (!plan.situp) plan.situp = { sets: targetSets, reps: targetReps, rest_sec: 45 };
+  if (!plan.jumpingjack) plan.jumpingjack = { sets: targetSets, reps: targetReps, rest_sec: 30 };
   if (!plan.mode) plan.mode = "moderate";
   if (!plan.estimated_duration_min) plan.estimated_duration_min = 10;
   return plan;
@@ -255,17 +275,7 @@ function PageProfile({ stats, setStats, onNext, onQuickStart, hasLastPlan }) {
 
 // [หน้า 2] สอบถามบริบทย่อยของวันนี้ (ตารางงาน ความเหนื่อยล้า สถานที่)
 function PageContext({ ctx, setCtx, onBack, onAnalyze, loading, error }) {
-  const fatigueLevels = [
-    { level: 1, label: "พลังเต็ม", sets: 3, reps: 12, color: "#00ff88" },
-    { level: 2, label: "สดใส", sets: 3, reps: 10, color: "#00ff88" },
-    { level: 3, label: "พร้อม", sets: 3, reps: 8, color: "#66ff99" },
-    { level: 4, label: "ปกติ", sets: 2, reps: 10, color: "#ffd700" },
-    { level: 5, label: "เริ่มเหนื่อย", sets: 2, reps: 8, color: "#ffd700" },
-    { level: 6, label: "เหนื่อย", sets: 2, reps: 6, color: "#ff9800" },
-    { level: 7, label: "เหนื่อยมาก", sets: 1, reps: 10, color: "#ff6633" },
-    { level: 8, label: "หมดแรง", sets: 1, reps: 8, color: "#ff4444" },
-    { level: 9, label: "หมดสภาพ", sets: 1, reps: 6, color: "#ff3366" },
-  ];
+  const fatigueLevels = FATIGUE_LEVELS;
   const current = fatigueLevels.find(f => f.level === ctx.fatigue) || fatigueLevels[4];
   return (
     <div style={{ maxWidth: "480px", margin: "0 auto", padding: "40px 24px" }}>
