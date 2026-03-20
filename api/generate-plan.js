@@ -28,7 +28,20 @@ export default async function handler(req, res) {
 - jumpingjack: หัวใจ, ขา (Cardio/Full Body)
 
 ตอบกลับเป็น JSON ตามโครงสร้างนี้เท่านั้น (ห้ามมี markdown):
-{"mode":"moderate","message":"...","motivation":"...","pushup":{"sets":${sets},"reps":${reps},"rest_sec":45},"squat":{"sets":${sets},"reps":${reps},"rest_sec":45},"plank":{"sets":${sets},"hold_sec":30,"rest_sec":30},"lunge":{"sets":${sets},"reps":${reps},"rest_sec":45},"situp":{"sets":${sets},"reps":${reps},"rest_sec":45},"jumpingjack":{"sets":${sets},"reps":${reps},"rest_sec":30},"form_tip":"...","estimated_duration_min":8}`;
+{
+  "mode": "moderate",
+  "message": "...",
+  "motivation": "...",
+  "pushup": {"sets": 0, "reps": 0, "rest_sec": 45},
+  "squat": {"sets": 0, "reps": 0, "rest_sec": 45},
+  "plank": {"sets": 0, "hold_sec": 30, "rest_sec": 30},
+  "lunge": {"sets": 0, "reps": 0, "rest_sec": 45},
+  "situp": {"sets": 0, "reps": 0, "rest_sec": 45},
+  "jumpingjack": {"sets": 0, "reps": 0, "rest_sec": 30},
+  "form_tip": "...",
+  "estimated_duration_min": 8
+}
+(กฎ: เปลี่ยน sets จาก 0 เป็น ${sets} และ reps เป็น ${reps} เฉพาะท่าที่ตรงกับเป้าหมายของผู้ใช้เท่านั้น ท่าอื่นๆ ให้คงค่า sets เป็น 0 ไว้)`;
 
   // ดึง API Key จาก Environment Variables
   const GROQ_KEY = process.env.GROQ_API_KEY;

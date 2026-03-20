@@ -108,16 +108,20 @@ async function fetchAIPlan(stats, ctx) {
 
  const plan = await res.json();
 
- // ใส่ค่า default ถ้า Gemini ตอบไม่ครบ (ใช้ค่าจาก fatigue level)
- if (!plan.pushup) plan.pushup = { sets: targetSets, reps: targetReps, rest_sec: 45 };
- if (!plan.squat) plan.squat = { sets: targetSets, reps: targetReps, rest_sec: 45 };
- if (!plan.plank) plan.plank = { sets: targetSets, hold_sec: 30, rest_sec: 30 };
- if (!plan.lunge) plan.lunge = { sets: targetSets, reps: targetReps, rest_sec: 45 };
- if (!plan.situp) plan.situp = { sets: targetSets, reps: targetReps, rest_sec: 45 };
- if (!plan.jumpingjack) plan.jumpingjack = { sets: targetSets, reps: targetReps, rest_sec: 30 };
- if (!plan.mode) plan.mode = "moderate";
- if (!plan.estimated_duration_min) plan.estimated_duration_min = 10;
- return plan;
+ // กำหนดค่าเริ่มต้นเป็น 0 ทุกท่า เพื่อให้แสดงเฉพาะท่าที่ AI เลือกจริงๆ
+ const defaultPlan = {
+   pushup: { sets: 0, reps: 0, rest_sec: 45 },
+   squat: { sets: 0, reps: 0, rest_sec: 45 },
+   plank: { sets: 0, hold_sec: 30, rest_sec: 30 },
+   lunge: { sets: 0, reps: 0, rest_sec: 45 },
+   situp: { sets: 0, reps: 0, rest_sec: 45 },
+   jumpingjack: { sets: 0, reps: 0, rest_sec: 30 },
+   mode: "moderate",
+   estimated_duration_min: 10
+ };
+
+ // รวมข้อมูลจาก AI เข้ากับค่าเริ่มต้น
+ return { ...defaultPlan, ...plan };
 }
 
 // ============================================================================
