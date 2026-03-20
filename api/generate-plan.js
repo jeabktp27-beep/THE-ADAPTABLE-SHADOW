@@ -34,12 +34,14 @@ export default async function handler(req, res) {
 ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
 {"mode":"moderate","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":${sets},"reps":${reps},"rest_sec":45},"squat":{"sets":${sets},"reps":${reps},"rest_sec":45},"plank":{"sets":${sets},"hold_sec":30,"rest_sec":30},"lunge":{"sets":${sets},"reps":${reps},"rest_sec":45},"situp":{"sets":${sets},"reps":${reps},"rest_sec":45},"jumpingjack":{"sets":${sets},"reps":${reps},"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
 
-  // ดึง API Key จาก Environment Variables ของ Vercel
-  const GEMINI_KEY = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY;
+  // ดึง API Key จาก Environment Variables (รองรับหลายชื่อเผื่อความผิดพลาด)
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_KEY || process.env.CLAUDE_API_KEY;
 
-  if (!GEMINI_KEY) {
+  if (!ANTHROPIC_KEY) {
     console.error("Missing API Key in Environment Variables");
-    return res.status(500).json({ message: "⚠️ ระบบยังไม่ได้ตั้งค่า API Key กรุณาแจ้งผู้ดูแลระบบ" });
+    return res.status(500).json({ 
+      message: "⚠️ ระบบยังไม่ได้ตั้งค่า API Key กรุณาเพิ่ม ANTHROPIC_API_KEY ใน Vercel Settings และทำการ Redeploy" 
+    });
   }
 
   // ============================================================
@@ -50,24 +52,25 @@ export default async function handler(req, res) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       // ============================================================
-      // เรียก Gemini API (Google AI)
+      // เรียก Anthropic API (Claude)
       // ============================================================
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_KEY,
+          "anthropic-version": "2023-06-01"
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1024,
-            responseMimeType: "application/json"
-          }
+          model: "claude-3-5-sonnet-20240620",
+          max_tokens: 1024,
+          messages: [
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          system: "คุณคือ AI Personal Trainer ตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นหรือ markdown"
         })
       });
 
@@ -82,14 +85,14 @@ export default async function handler(req, res) {
       // ถ้า Error อื่น
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Gemini API Error:", response.status, errorText);
+        console.error("Anthropic API Error:", response.status, errorText);
         const friendlyMsg = getFriendlyErrorMessage(response.status, errorText);
         return res.status(response.status).json({ message: friendlyMsg });
       }
 
-      // สำเร็จ! ดึง JSON จาก Gemini response
+      // สำเร็จ! ดึง JSON จาก Anthropic response
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const text = data.content?.[0]?.text || "{}";
 
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) {
