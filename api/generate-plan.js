@@ -16,30 +16,35 @@ export default async function handler(req, res) {
   const bmi = (stats.weight / (stats.height / 100) ** 2).toFixed(1);
   const prompt = `ข้อมูลผู้ใช้: น้ำหนัก ${stats.weight}kg, ส่วนสูง ${stats.height}cm, ไขมัน ${stats.bodyFat}%, BMI ${bmi}
 เป้าหมายวันนี้: "${stats.goal || 'ออกกำลังให้สุขภาพดี'}"
-ความเหนื่อยล้า: ${ctx.fatigue}/9 (ค่าที่เหมาะสม: sets=${sets}, reps=${reps})
 
-กฎเหล็ก (ห้ามฝ่าฝืน):
-1. เลือกเฉพาะท่าที่ "เกี่ยวข้องโดยตรง" กับเป้าหมายเท่านั้น
-2. ท่าที่เลือก: ให้ใช้ sets=${sets}, reps=${reps} เท่านั้น
-3. ท่าที่ไม่เลือก: ต้องตั้งค่า sets เป็น 0 และ reps เป็น 0 เสมอ
-4. ห้ามแสดงท่าที่ไม่เกี่ยวข้องกับเป้าหมายเด็ดขาด (เช่น เป้าหมายคือ "ขา" ห้ามใส่ pushup หรือ situp มาเป็นตัวเลขเด็ดขาด)
+ท่าออกกำลังที่มีให้เลือกและหมวดหมู่:
+1. pushup: อก, แขนหลัง (Upper Body)
+2. squat: ขา, ก้น (Lower Body)
+3. plank: แกนกลางลำตัว (Core)
+4. lunge: ขา, ก้น (Lower Body)
+5. situp: หน้าท้อง (Core)
+6. jumpingjack: หัวใจ, ขา (Cardio/Full Body)
 
-ตัวอย่างการตอบกลับที่ถูกต้อง (หากเป้าหมายคือ "เน้นขา"):
+กฎการคัดเลือกท่า:
+1. วิเคราะห์เป้าหมายผู้ใช้อย่างละเอียด และเลือกเฉพาะท่าที่ "ควรทำ" เพื่อให้บรรลุเป้าหมายนั้น
+2. หากท่าไหนไม่เกี่ยวข้อง ให้ตั้งค่า "sets": 0
+3. หากท่าไหนเลือกให้ทำ ให้ตั้งค่า "sets": 1 (เพื่อระบุว่าเลือกท่านี้)
+4. ไม่ต้องกำหนดจำนวนครั้ง (reps) หรือเวลา (hold_sec) เพราะผู้ใช้จะกำหนดเองภายหลัง
+
+ตอบกลับเป็น JSON บริสุทธิ์ (ห้ามมี markdown):
 {
   "mode": "moderate",
-  "message": "เน้นช่วงล่างเพื่อความแข็งแรงของขาครับ",
-  "motivation": "สู้ๆ ครับ ขาแข็งแรงเดินเหินสะดวก!",
-  "pushup": {"sets": 0, "reps": 0, "rest_sec": 45},
-  "squat": {"sets": ${sets}, "reps": ${reps}, "rest_sec": 45},
-  "plank": {"sets": 0, "hold_sec": 30, "rest_sec": 30},
-  "lunge": {"sets": ${sets}, "reps": ${reps}, "rest_sec": 45},
-  "situp": {"sets": 0, "reps": 0, "rest_sec": 45},
-  "jumpingjack": {"sets": 0, "reps": 0, "rest_sec": 30},
-  "form_tip": "ทิ้งน้ำหนักลงที่ส้นเท้าเวลาทำ squat",
-  "estimated_duration_min": 6
-}
-
-ตอบกลับเป็น JSON บริสุทธิ์เท่านั้น:`;
+  "message": "คำแนะนำสั้นๆ",
+  "motivation": "ข้อความกระตุ้น",
+  "pushup": {"sets": 0},
+  "squat": {"sets": 0},
+  "plank": {"sets": 0},
+  "lunge": {"sets": 0},
+  "situp": {"sets": 0},
+  "jumpingjack": {"sets": 0},
+  "form_tip": "เคล็ดลับฟอร์ม 1 ข้อ",
+  "estimated_duration_min": 10
+}`;
 
   // ดึง API Key จาก Environment Variables
   const GROQ_KEY = process.env.GROQ_API_KEY;
@@ -118,17 +123,22 @@ export default async function handler(req, res) {
 
       // ============================================================
       // Safety Net: Force override sets/reps ให้ตรงกับที่ user กำหนด
-      // ป้องกัน AI ดื้อไม่ทำตามคำสั่ง
+      // ป้องกัน AI ดื้อไม่ทำตามคำสั่ง (ใช้ plan[ex].sets > 0 เป็นตัวตัดสิน)
       // ============================================================
       const repExercises = ['pushup', 'squat', 'lunge', 'situp', 'jumpingjack'];
       repExercises.forEach(ex => {
-        if (plan[ex]) {
+        if (plan[ex] && plan[ex].sets > 0) {
           plan[ex].sets = sets;
           plan[ex].reps = reps;
+        } else if (plan[ex]) {
+          plan[ex].sets = 0;
+          plan[ex].reps = 0;
         }
       });
-      if (plan.plank) {
+      if (plan.plank && plan.plank.sets > 0) {
         plan.plank.sets = sets;
+      } else if (plan.plank) {
+        plan.plank.sets = 0;
       }
 
       return res.status(200).json(plan);

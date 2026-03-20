@@ -275,9 +275,9 @@ function PageProfile({ stats, setStats, onNext, onQuickStart, hasLastPlan }) {
  return (
  <div style={{ maxWidth: "480px", margin: "0 auto", padding: "32px 20px" }}>
  <div style={{ marginBottom: "32px" }}>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "4px", color: "#00ff8855", marginBottom: "10px" }}>ขั้นตอน 1/2</div>
+ <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "4px", color: "#00ff8855", marginBottom: "10px" }}>AI ANALYSIS</div>
  <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>ข้อมูล<span style={{ color: "#00ff88" }}>ของคุณ</span></h1>
- <p style={{ color: "#ffffff44", fontFamily: "'Space Mono',monospace", fontSize: "11px", marginTop: "12px", lineHeight: 1.8 }}>AI จะใช้ข้อมูลนี้ออกแบบโปรแกรมเฉพาะตัว</p>
+ <p style={{ color: "#ffffff44", fontFamily: "'Space Mono',monospace", fontSize: "11px", marginTop: "12px", lineHeight: 1.8 }}>ระบุเป้าหมายเพื่อให้ AI ออกแบบโปรแกรมที่ใช่สำหรับคุณ</p>
  </div>
 
  {/* ชื่อเล่น */}
@@ -324,13 +324,13 @@ function PageProfile({ stats, setStats, onNext, onQuickStart, hasLastPlan }) {
  value={stats.goal || ""}
  onChange={e => setStats(s => ({ ...s, goal: e.target.value }))}
  rows={2}
- placeholder="เช่น: อยากลดพุง, เสริมแขน, ฝึกความอดทน"
+ placeholder="เช่น: อยากลดพุง, เสริมแขน, ฝึกความขา"
  style={{ width: "100%", background: "#0d0f18", border: "1px solid #ffffff15", borderRadius: "8px", padding: "12px 14px", color: "#ffd700", fontFamily: "'Space Mono',monospace", fontSize: "12px", outline: "none", boxSizing: "border-box", resize: "vertical", lineHeight: 1.7 }}
  />
  </div>
 
  <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "28px" }}>
- <GlowButton onClick={onNext} style={{ width: "100%", minHeight: "52px" }}>วิเคราะห์ร่างกาย →</GlowButton>
+ <GlowButton onClick={onNext} style={{ width: "100%", minHeight: "52px" }}>เริ่มวิเคราะห์และจัดตาราง AI →</GlowButton>
  {hasLastPlan && (
  <GlowButton variant="ghost" onClick={onQuickStart} style={{ width: "100%", borderColor: "#ffd70044", color: "#ffd700", minHeight: "52px" }}> เริ่มออกกำลังเลย (แผนเดิม)</GlowButton>
  )}
@@ -527,6 +527,52 @@ function PagePlan({ plan, onStart, onStartGuided, onBack, onHistory, onDashboard
  );
 }
 
+
+// [หน้าสำหรับตั้งค่า Sets/Reps] หน้าใหม่ที่เพิ่มขึ้นมาเพื่อให้ผู้ใช้กรอกเอง
+function PageSetRepsConfig({ exercise, plan, setPlan, onConfirm, onBack }) {
+  const [sets, setSets] = useState(plan[exercise]?.sets || 3);
+  const [reps, setReps] = useState(plan[exercise]?.reps || 12);
+  const [holdSec, setHoldSec] = useState(plan[exercise]?.hold_sec || 30);
+  const isPlank = exercise === "plank";
+
+  const handleConfirm = () => {
+    const updatedPlan = { ...plan };
+    updatedPlan[exercise] = {
+      ...updatedPlan[exercise],
+      sets: parseInt(sets),
+      reps: isPlank ? 0 : parseInt(reps),
+      hold_sec: isPlank ? parseInt(holdSec) : 0,
+      rest_sec: 45 // ค่าเริ่มต้นสำหรับเวลาพัก
+    };
+    setPlan(updatedPlan);
+    onConfirm();
+  };
+
+  const names = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE", situp: "SIT-UP", jumpingjack: "JUMPING JACK" };
+
+  return (
+    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ marginBottom: "32px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "4px", color: "#00ff8855", marginBottom: "10px" }}>CONFIG EXERCISE</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>ตั้งค่า<span style={{ color: "#00ff88" }}> {names[exercise]}</span></h1>
+      </div>
+
+      <div style={{ background: "#12141d", border: "1px solid #ffffff11", borderRadius: "12px", padding: "24px", marginBottom: "24px" }}>
+        <StatInput label="จำนวนเซต (Sets)" value={sets} onChange={setSets} min={1} max={10} unit="SETS" />
+        {isPlank ? (
+          <StatInput label="เวลาค้าง (Seconds)" value={holdSec} onChange={setHoldSec} min={10} max={300} step={5} unit="SEC" />
+        ) : (
+          <StatInput label="จำนวนครั้ง (Reps)" value={reps} onChange={setReps} min={1} max={50} unit="REPS" />
+        )}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <GlowButton onClick={handleConfirm}>ตกลงและเริ่มฝึก →</GlowButton>
+        <GlowButton variant="ghost" onClick={onBack}>ยกเลิก</GlowButton>
+      </div>
+    </div>
+  );
+}
 
 // [หน้า 4] หน้าแสดงภาพตัวอย่างท่าที่ถูกต้องให้ผู้ใช้ดูก่อน
 function PageVideoTutorial({ exercise, onNext, onBack }) {
@@ -1568,6 +1614,9 @@ export default function AdaptableShadow() {
    setGuidedQueue(filteredOrder);
    setGuidedResults([]);
    setExercise(filteredOrder[0]);
+   // ใน Guided Mode ข้ามหน้าตั้งค่าไปก่อน (ใช้ค่า default หรือ AI) 
+   // หรือถ้าต้องการให้ตั้งค่าทุกท่า ต้องแก้ logic คิว ซึ่งจะซับซ้อนเกินไป 
+   // เบื้องต้นให้ไปหน้า tutorial เลยตาม flow เดิมของ guided
    setPage("tutorial");
  };
 
@@ -1628,10 +1677,10 @@ export default function AdaptableShadow() {
  </div>
  )}
  <div className="fade-in" key={page}>
- {page === "profile" && <PageProfile stats={stats} setStats={setStats} onNext={() => setPage("context")} hasLastPlan={!!loadLS(LS_LAST_PLAN, null)} onQuickStart={handleQuickStart} />}
- {page === "context" && <PageContext ctx={ctx} setCtx={setCtx} onBack={() => setPage("profile")} onAnalyze={handleAnalyze} loading={loading} error={planError} />}
+ {page === "profile" && <PageProfile stats={stats} setStats={setStats} onNext={handleAnalyze} hasLastPlan={!!loadLS(LS_LAST_PLAN, null)} onQuickStart={handleQuickStart} />}
  {page === "planning" && <PagePlanning />}
- {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setGuidedQueue([]); setPage("tutorial"); }} onStartGuided={handleStartGuided} onBack={() => setPage("context")} onHistory={() => setPage("history")} onDashboard={() => setPage("dashboard")} />}
+ {page === "plan" && plan && <PagePlan plan={plan} onStart={ex => { setExercise(ex); setGuidedQueue([]); setPage("set-reps-config"); }} onStartGuided={handleStartGuided} onBack={() => setPage("profile")} onHistory={() => setPage("history")} onDashboard={() => setPage("dashboard")} />}
+ {page === "set-reps-config" && plan && <PageSetRepsConfig exercise={exercise} plan={plan} setPlan={setPlan} onConfirm={() => setPage("tutorial")} onBack={() => setPage("plan")} />}
  {page === "tutorial" && plan && <PageVideoTutorial exercise={exercise} onNext={() => setPage("camera-guide")} onBack={() => setPage("plan")} />}
  {page === "camera-guide" && plan && <PageCameraGuide exercise={exercise} onNext={() => { setCameraStream(null); setPage("camera-permission"); }} onBack={() => setPage("tutorial")} />}
  {page === "camera-permission" && plan && <PageCameraPermission exercise={exercise} plan={plan} onGranted={stream => { setCameraStream(stream); setPage("camera-preview"); }} onBack={() => setPage("camera-guide")} />}
