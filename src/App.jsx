@@ -70,6 +70,23 @@ const LM = {
 };
 function lm(landmarks, idx) { return [landmarks[idx].x, landmarks[idx].y]; }
 
+// ฟังก์ชันประมาณการแคลอรี่ตามท่าทางและเวลา
+function estimateCalories(exercise, totalReps, elapsedSec, weightKg) {
+  const metValues = {
+    pushup: 8.0,
+    squat: 5.0,
+    plank: 3.3,
+    lunge: 6.0,
+    situp: 4.0,
+    jumpingjack: 8.0
+  };
+  const met = metValues[exercise] || 5.0;
+  // สูตร: (MET * 3.5 * weightKg / 200) * (durationInMinutes)
+  const durationMin = elapsedSec / 60;
+  const kcal = (met * 3.5 * weightKg / 200) * durationMin;
+  return Math.round(kcal * 10) / 10;
+}
+
 // ============================================================================
 // 1.5 ตาราง Fatigue Levels (ใช้ร่วมกันทั้ง UI และ API)
 // ============================================================================
