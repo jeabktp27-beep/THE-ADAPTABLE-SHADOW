@@ -70,23 +70,6 @@ const LM = {
 };
 function lm(landmarks, idx) { return [landmarks[idx].x, landmarks[idx].y]; }
 
-// ฟังก์ชันประมาณการแคลอรี่ตามท่าทางและเวลา
-function estimateCalories(exercise, totalReps, elapsedSec, weightKg) {
-  const metValues = {
-    pushup: 8.0,
-    squat: 5.0,
-    plank: 3.3,
-    lunge: 6.0,
-    situp: 4.0,
-    jumpingjack: 8.0
-  };
-  const met = metValues[exercise] || 5.0;
-  // สูตร: (MET * 3.5 * weightKg / 200) * (durationInMinutes)
-  const durationMin = elapsedSec / 60;
-  const kcal = (met * 3.5 * weightKg / 200) * durationMin;
-  return Math.round(kcal * 10) / 10;
-}
-
 // ============================================================================
 // 1.5 ตาราง Fatigue Levels (ใช้ร่วมกันทั้ง UI และ API)
 // ============================================================================
@@ -481,22 +464,12 @@ function PagePlan({ plan, onStart, onStartGuided, onBack, onHistory, onDashboard
  { key: "jumpingjack", label: "Jumping Jack", img: "/exercises/jumpingjack.png", stat: `${plan.jumpingjack?.sets ?? 0}×${plan.jumpingjack?.reps ?? 0}`, sub: `พัก ${plan.jumpingjack?.rest_sec ?? 0}วิ`, accent: "#ff3366" },
  ].filter(ex => plan[ex.key] && (plan[ex.key].sets ?? 0) > 0);
 
- // คำนวณแคลอรี่โดยประมาณของทั้งแผน
- const totalEstimatedKcal = exercises.reduce((sum, ex) => {
-   const p = plan[ex.key];
-   const totalReps = p.sets * (ex.key === "plank" ? p.hold_sec : p.reps);
-   // ประมาณเวลา: 1 rep = 3 วิ, plank 1s = 1s, บวกเวลาพัก
-   const estimatedSec = (ex.key === "plank" ? totalReps : totalReps * 3) + (p.sets * p.rest_sec);
-   return sum + estimateCalories(ex.key, totalReps, estimatedSec, 70); // ใช้ 70 เป็นค่ากลาง
- }, 0);
-
  return (
  <div style={{ maxWidth: "520px", margin: "0 auto", padding: "32px 20px" }}>
  <div style={{ marginBottom: "28px" }}>
  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
  <ModeChip mode={plan.mode} />
  <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44" }}>{plan.estimated_duration_min} นาที</span>
- <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ff3366" }}>🔥 ~{Math.round(totalEstimatedKcal)} kcal</span>
  </div>
  <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>แผนของคุณ <span style={{ background: "linear-gradient(135deg, #00ff88, #00bfff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>พร้อมแล้ว!</span></h1>
  </div>
@@ -790,14 +763,12 @@ function PageSummary({ result, stats, onPlayAgain, onBack }) {
  const timeStr = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
  const isHold = result.exercise === "plank";
  const statLabel = isHold ? `${result.totalReps}s HELD` : `${result.totalReps} REPS`;
- const calLabel = `${result.calories} KCAL`;
 
  const statCards = [
  { label: "EXERCISE", val: names[result.exercise] || result.exercise.toUpperCase() },
  { label: "SETS", val: `${result.sets}×${isHold ? result.exPlan.hold_sec + "s" : result.exPlan.reps}` },
  { label: isHold ? "HELD" : "REPS", val: statLabel },
  { label: "TIME", val: timeStr },
- { label: "CALORIES", val: calLabel },
  ];
 
  return (
@@ -805,7 +776,7 @@ function PageSummary({ result, stats, onPlayAgain, onBack }) {
  <div style={{ textAlign: "center", marginBottom: "40px" }}>
  <div style={{ fontSize: "72px", marginBottom: "16px" }}></div>
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#00ff8866", marginBottom: "12px" }}>// SESSION COMPLETE</div>
- <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(28px,5vw,40px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.1, margin: 0 }}>MISSION<br /><span style={{ color: "#00ff88" }}>ACCOMPLISHED</span></h1>
+ <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,40px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.1, margin: 0 }}>MISSION<br /><span style={{ color: "#00ff88" }}>ACCOMPLISHED</span></h1>
  </div>
  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "32px" }}>
  {statCards.map(({ label, val }) => (
@@ -814,14 +785,6 @@ function PageSummary({ result, stats, onPlayAgain, onBack }) {
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff44", letterSpacing: "1px", marginTop: "4px" }}>{label}</div>
  </div>
  ))}
- </div>
- {/* Calorie highlight bar */}
- <div style={{ background: "linear-gradient(135deg, #0d1a0d, #001a0a)", border: "1px solid #00ff8844", borderRadius: "8px", padding: "20px", marginBottom: "32px", display: "flex", alignItems: "center", gap: "16px" }}>
- <div style={{ fontSize: "36px" }}></div>
- <div>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "28px", fontWeight: 700, color: "#ffd700" }}>{result.calories} kcal</div>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff55", marginTop: "4px" }}>ประมาณการแคลอรี่ที่เผาผลาญ</div>
- </div>
  </div>
  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
  <GlowButton onClick={onPlayAgain} style={{ width: "100%" }}> ออกกำลังท่าอื่น</GlowButton>
@@ -860,20 +823,18 @@ function PageHistory({ onBack, stats }) {
    return isMatchSearch;
  }).sort((a, b) => b.id - a.id);
 
- const totalCal = filteredHistory.reduce((s, h) => s + (h.calories || 0), 0);
  const totalSessions = filteredHistory.length;
 
  // ฟังก์ชันส่งออก CSV
  const exportCSV = () => {
-   const headers = ["ID", "Date", "Exercise", "Sets", "Target", "Elapsed(s)", "Calories(kcal)"];
+   const headers = ["ID", "Date", "Exercise", "Sets", "Target", "Elapsed(s)"];
    const rows = history.map(h => [
      h.id,
      new Date(h.id).toISOString(),
      names[h.exercise] || h.exercise,
      h.sets,
      h.exercise === "plank" ? `${h.exPlan?.hold_sec}s` : h.exPlan?.reps,
-     h.elapsed,
-     h.calories
+     h.elapsed
    ]);
    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -917,13 +878,11 @@ function PageHistory({ onBack, stats }) {
  </div>
 
  {/* Summary row */}
- <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
- {[[" SESSIONS", totalSessions], [" TOTAL KCAL", totalCal]].map(([k, v]) => (
- <div key={k} style={{ background: "#0d1a0d", border: "1px solid #00bfff22", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "24px", fontWeight: 700, color: "#00bfff" }}>{v}</div>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff44", letterSpacing: "1px", marginTop: "4px" }}>{k}</div>
+ <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "12px", marginBottom: "24px" }}>
+ <div style={{ background: "#0d1a0d", border: "1px solid #00bfff22", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
+ <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "24px", fontWeight: 700, color: "#00bfff" }}>{totalSessions}</div>
+ <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff44", letterSpacing: "1px", marginTop: "4px" }}>SESSIONS</div>
  </div>
- ))}
  </div>
 
  {filteredHistory.length === 0 ? (
@@ -950,7 +909,6 @@ function PageHistory({ onBack, stats }) {
  </div>
  </div>
  <div style={{ textAlign: "right", flexShrink: 0 }}>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffd700" }}>{h.calories || 0} kcal</div>
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffffff33", marginTop: "3px" }}>{dateStr} {timeStr}</div>
  </div>
  </div>
@@ -1017,7 +975,6 @@ function PageDashboard({ onBack }) {
  const [viewMode, setViewMode] = useState("week"); // week, month
  
  // สถิติรวม
- const totalCal = history.reduce((s, h) => s + (h.calories || 0), 0);
  const totalSessions = history.length;
  const totalTime = history.reduce((s, h) => s + (h.elapsed || 0), 0);
 
@@ -1030,13 +987,13 @@ function PageDashboard({ onBack }) {
      const key = d.toISOString().slice(0, 10);
      const label = viewMode === "week" ? d.toLocaleDateString("th-TH", { weekday: "short" }) : d.getDate();
      const sessions = history.filter(h => new Date(h.id).toISOString().slice(0, 10) === key);
-     days.push({ label, cal: sessions.reduce((s, h) => s + (h.calories || 0), 0), count: sessions.length });
+     days.push({ label, count: sessions.length });
    }
    return days;
  };
 
  const days = getChartData();
- const maxCal = Math.max(...days.map(d => d.cal), 1);
+ const maxSessions = Math.max(...days.map(d => d.count), 1);
 
  // Streak
  let streak = 0;
@@ -1069,24 +1026,24 @@ function PageDashboard({ onBack }) {
    const barW = (W - 90) / days.length - barGap;
    days.forEach((d, i) => {
      const x = 60 + i * ((W - 90) / days.length);
-     const barH = d.cal > 0 ? (d.cal / maxCal) * (H - 90) : 0;
+     const barH = d.count > 0 ? (d.count / maxSessions) * (H - 90) : 0;
      const y = H - 50 - barH;
      const grad = ctx.createLinearGradient(x, y, x, H - 50);
      grad.addColorStop(0, "#00ff88"); grad.addColorStop(1, "#00ff8833");
      ctx.fillStyle = grad; ctx.fillRect(x, y, barW, barH);
-     ctx.shadowColor = "#00ff88"; ctx.shadowBlur = d.cal > 0 ? 6 : 0;
+     ctx.shadowColor = "#00ff88"; ctx.shadowBlur = d.count > 0 ? 6 : 0;
      ctx.fillRect(x, y, barW, 2); ctx.shadowBlur = 0;
      
-     if (viewMode === "week" && d.cal > 0) { 
-       ctx.fillStyle = "#00ff88"; ctx.font = "bold 10px 'Space Mono',monospace"; ctx.textAlign = "center"; ctx.fillText(`${d.cal}`, x + barW / 2, y - 6); 
+     if (viewMode === "week" && d.count > 0) { 
+       ctx.fillStyle = "#00ff88"; ctx.font = "bold 10px 'Space Mono',monospace"; ctx.textAlign = "center"; ctx.fillText(`${d.count}`, x + barW / 2, y - 6); 
      }
      
      if (i % (viewMode === "week" ? 1 : 5) === 0) {
        ctx.fillStyle = "#ffffff55"; ctx.font = "10px 'Space Mono',monospace"; ctx.textAlign = "center"; ctx.fillText(d.label, x + barW / 2, H - 28);
      }
    });
-   ctx.fillStyle = "#ffffff33"; ctx.font = "9px 'Space Mono',monospace"; ctx.textAlign = "right"; ctx.fillText("kcal", 45, 25);
- }, [days, maxCal, viewMode]);
+   ctx.fillStyle = "#ffffff33"; ctx.font = "9px 'Space Mono',monospace"; ctx.textAlign = "right"; ctx.fillText("sessions", 45, 25);
+ }, [days, maxSessions, viewMode]);
 
  return (
  <div style={{ maxWidth: "520px", margin: "0 auto", padding: "40px 24px" }}>
@@ -1096,8 +1053,8 @@ function PageDashboard({ onBack }) {
  </div>
 
  {/* Summary cards */}
- <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "24px" }}>
- {[["🔥", totalCal, "KCAL"], ["⏱️", Math.round(totalTime / 60), "MINS"], ["⚡", streak, "STREAK"]].map(([icon, val, label]) => (
+ <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
+ {[["⏱️", Math.round(totalTime / 60), "MINS"], ["⚡", streak, "STREAK"]].map(([icon, val, label]) => (
  <div key={label} style={{ background: "#0d1a0d", border: "1px solid #a855f722", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
  <div style={{ fontSize: "20px", marginBottom: "6px" }}>{icon}</div>
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "22px", fontWeight: 700, color: "#a855f7" }}>{val}</div>
@@ -1109,7 +1066,7 @@ function PageDashboard({ onBack }) {
  {/* Chart Container */}
  <div style={{ background: "#0d1a0d", border: "1px solid #a855f722", borderRadius: "8px", overflow: "hidden", marginBottom: "24px" }}>
    <div style={{ background: "#060810", padding: "12px 20px", borderBottom: "1px solid #a855f722", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-     <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#a855f7", letterSpacing: "2px" }}>WEEKLY CALORIES</div>
+     <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#a855f7", letterSpacing: "2px" }}>WORKOUT SESSIONS</div>
      <div style={{ display: "flex", gap: "4px" }}>
        {[["week", "7D"], ["month", "30D"]].map(([v, l]) => (
          <button key={v} onClick={() => setViewMode(v)} style={{ padding: "4px 8px", background: viewMode === v ? "#a855f7" : "transparent", border: "1px solid #a855f744", borderRadius: "4px", color: viewMode === v ? "#060810" : "#a855f7", fontSize: "9px", fontWeight: 700, cursor: "pointer" }}>{l}</button>
@@ -1366,7 +1323,6 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  const [cameraErr, setCameraErr] = useState(null), [done, setDone] = useState(false);
  const [startTime] = useState(Date.now());
  const [elapsed, setElapsed] = useState(0);
- const [currentKcal, setCurrentKcal] = useState(0);
  const lastRepTimeRef = useRef(0); // ป้องกันการนับซ้ำซ้อน
  const DEBOUNCE_TIME = 1000; // ปรับลดเหลือ 1 วินาทีตามความต้องการของผู้ใช้
  const exPlan = plan[exercise];
@@ -1376,14 +1332,10 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  useEffect(() => { streamRef.current = initialStream || null; }, [initialStream]);
  useEffect(() => { 
    const t = setInterval(() => {
-     const sec = Math.floor((Date.now() - startTime) / 1000);
-     setElapsed(sec);
-     // คำนวณแคลอรี่แบบ Real-time
-     const kcal = estimateCalories(exercise, counterRef.current, sec, weightKg || 65);
-     setCurrentKcal(kcal);
+     setElapsed(Math.floor((Date.now() - startTime) / 1000));
    }, 1000); 
    return () => clearInterval(t); 
- }, [startTime, exercise, weightKg]);
+ }, [startTime]);
 
  useEffect(() => {
  if (!mediapipeReady) return;
@@ -1624,8 +1576,8 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  }
  setAngle(Math.round(ang)); setFormOk(ok); setFeedback(fb);
  } catch (_) { }
- drawHUD(ctx2d, W, H, counterRef.current, setNumRef.current, isPlank ? exPlan.hold_sec : exPlan.reps, exPlan.sets, Math.round(ang), ok, fb, stageRef.current, elapsed, currentKcal);
- }, [exercise, exPlan, elapsed, isPlank, currentKcal]);
+ drawHUD(ctx2d, W, H, counterRef.current, setNumRef.current, isPlank ? exPlan.hold_sec : exPlan.reps, exPlan.sets, Math.round(ang), ok, fb, stageRef.current, elapsed);
+ }, [exercise, exPlan, elapsed, isPlank]);
 
  function startRest() {
  if (finishedRef.current) return;
@@ -1641,21 +1593,16 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  if (isPlank && plankIntervalRef.current) clearInterval(plankIntervalRef.current);
  if (rafRef.current) cancelAnimationFrame(rafRef.current);
  Sound.complete();
- const cal = estimateCalories(exercise, exPlan.sets * (isPlank ? exPlan.hold_sec : exPlan.reps), elapsed, weightKg || 65);
- if (onDone) onDone({ exercise, exPlan, sets: exPlan.sets, totalReps: exPlan.sets * (isPlank ? exPlan.hold_sec : exPlan.reps), elapsed, calories: cal });
+ if (onDone) onDone({ exercise, exPlan, sets: exPlan.sets, totalReps: exPlan.sets * (isPlank ? exPlan.hold_sec : exPlan.reps), elapsed });
  else setDone(true);
  }
 
- function drawHUD(ctx2d, W, H, cnt, sn, tr, ts, ang, ok, fb, stage, el, kcal) {
+ function drawHUD(ctx2d, W, H, cnt, sn, tr, ts, ang, ok, fb, stage, el) {
  ctx2d.fillStyle = "rgba(6,8,16,0.75)"; ctx2d.fillRect(0, 0, W, 70);
  ctx2d.fillStyle = "#00ff88"; ctx2d.font = "bold 13px 'Space Mono',monospace";
  const exLabel = exNames[exercise] || exercise.toUpperCase();
  ctx2d.fillText(exLabel, 20, 28);
  ctx2d.fillStyle = "#ffffff66"; ctx2d.font = "11px 'Space Mono',monospace"; ctx2d.fillText(`SET ${sn}/${ts}`, 20, 50);
-
- // แคลอรี่แบบ Real-time
- ctx2d.fillStyle = "#ff3366"; ctx2d.font = "bold 12px 'Space Mono',monospace";
- ctx2d.fillText(`⚡ ${kcal} kcal`, 20, 65);
 
  ctx2d.fillStyle = "#ffd700"; ctx2d.font = "bold 42px 'Space Mono',monospace";
  const repStr = isPlank ? `${cnt}s` : `${cnt}/${tr}`; ctx2d.fillText(repStr, W / 2 - ctx2d.measureText(repStr).width / 2, 52);
