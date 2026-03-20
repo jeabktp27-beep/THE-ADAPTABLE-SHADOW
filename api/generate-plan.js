@@ -34,8 +34,9 @@ export default async function handler(req, res) {
 ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
 {"mode":"moderate","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":${sets},"reps":${reps},"rest_sec":45},"squat":{"sets":${sets},"reps":${reps},"rest_sec":45},"plank":{"sets":${sets},"hold_sec":30,"rest_sec":30},"lunge":{"sets":${sets},"reps":${reps},"rest_sec":45},"situp":{"sets":${sets},"reps":${reps},"rest_sec":45},"jumpingjack":{"sets":${sets},"reps":${reps},"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
 
-  // ดึง API Key จาก Environment Variables (รองรับหลายชื่อเผื่อความผิดพลาด)
-  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_KEY || process.env.CLAUDE_API_KEY;
+  // ดึง API Key จาก Environment Variables และลบอักขระแปลกปลอม
+  const rawKey = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_KEY || process.env.CLAUDE_API_KEY;
+  const ANTHROPIC_KEY = rawKey ? rawKey.trim().replace(/[^\x21-\x7E]/g, '') : null;
 
   if (!ANTHROPIC_KEY) {
     console.error("Missing API Key in Environment Variables");
@@ -86,8 +87,19 @@ export default async function handler(req, res) {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Anthropic API Error:", response.status, errorText);
-        const friendlyMsg = getFriendlyErrorMessage(response.status, errorText);
-        return res.status(response.status).json({ message: friendlyMsg });
+        
+        // ส่งรายละเอียด Error กลับไปให้ User เห็นชัดๆ เพื่อหาสาเหตุ
+        let detail = "";
+        try {
+          const errJson = JSON.parse(errorText);
+          detail = errJson.error?.message || errorText;
+        } catch (e) {
+          detail = errorText;
+        }
+
+        return res.status(response.status).json({ 
+          message: `⚠️ AI Error (${response.status}): ${detail.substring(0, 150)}` 
+        });
       }
 
       // สำเร็จ! ดึง JSON จาก Anthropic response
@@ -136,19 +148,19 @@ export default async function handler(req, res) {
 function getFriendlyErrorMessage(status, errorText) {
   switch (status) {
     case 400:
-      return "⚠️ ข้อมูลที่ส่งไปไม่ถูกต้อง กรุณาลองใหม่";
+      return `⚠️ ข้อมูลไม่ถูกต้อง: ${errorText.substring(0, 80)}`;
     case 401:
-      return "🔐 API Key ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่า";
+      return "🔐 API Key ไม่ถูกต้อง หรือไม่มีสิทธิ์เข้าถึง (401)";
     case 403:
-      return "🚫 API Key ถูกระงับการใช้งาน";
+      return "🚫 API Key ถูกระงับ หรือโดนบล็อกการเข้าถึง (403)";
     case 404:
-      return "❌ ไม่พบโมเดล AI กรุณาแจ้งผู้ดูแลระบบ";
+      return "❌ ไม่พบโมเดล AI (404) กรุณาแจ้งผู้ดูแลระบบ";
     case 429:
-      return "🔥 ระบบ AI มีคนใช้เยอะในตอนนี้ กรุณารอ 1-2 นาทีแล้วลองใหม่";
+      return "🔥 โควตา AI เต็ม หรือโดนจำกัดความเร็ว (429) กรุณารอสักครู่";
     case 500:
     case 503:
-      return "🛠️ เซิร์ฟเวอร์ AI ขัดข้อง กรุณาลองใหม่ภายหลัง";
+      return "🛠️ เซิร์ฟเวอร์ Anthropic ขัดข้อง (5xx) กรุณาลองใหม่ภายหลัง";
     default:
-      return `⚠️ เกิดข้อผิดพลาดจาก AI (Error ${status}) กรุณาลองใหม่`;
+      return `⚠️ เกิดข้อผิดพลาดจาก AI (Status: ${status})`;
   }
 }
