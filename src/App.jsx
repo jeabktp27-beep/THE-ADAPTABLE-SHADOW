@@ -1554,13 +1554,17 @@ export default function AdaptableShadow() {
  if (lastPlan) { setPlan(lastPlan); setPage("plan"); }
  };
 
- // Guided Workout: เริ่มทำทุกท่าตามลำดับอัตโนมัติ
+ // Guided Workout: เริ่มทำทุกท่าตามลำดับอัตโนมัติ (เฉพาะท่าที่ AI เลือก)
  const handleStartGuided = () => {
- setGuidedQueue([...EXERCISE_ORDER]);
- setGuidedResults([]);
- const first = EXERCISE_ORDER[0];
- setExercise(first);
- setPage("tutorial");
+   const filteredOrder = EXERCISE_ORDER.filter(ex => plan[ex] && plan[ex].sets > 0);
+   if (filteredOrder.length === 0) {
+     alert("ไม่มีท่าออกกำลังกายในแผนปัจจุบัน");
+     return;
+   }
+   setGuidedQueue(filteredOrder);
+   setGuidedResults([]);
+   setExercise(filteredOrder[0]);
+   setPage("tutorial");
  };
 
  const hideHeader = page === "tracker" || page === "camera-permission" || page === "camera-preview" || page === "camera-guide";

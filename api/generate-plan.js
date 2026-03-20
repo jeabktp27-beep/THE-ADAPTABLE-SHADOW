@@ -14,25 +14,21 @@ export default async function handler(req, res) {
   const reps = targetReps || 10;
 
   const bmi = (stats.weight / (stats.height / 100) ** 2).toFixed(1);
-  const prompt = `คุณคือ AI Personal Trainer ชื่อ "The Adaptable Shadow"
-ตอบกลับเป็น JSON เท่านั้น ไม่มีข้อความอื่นนอกจาก JSON บริสุทธิ์
-ข้อมูลผู้ใช้: น้ำหนัก ${stats.weight}kg, ส่วนสูง ${stats.height}cm, ไขมัน ${stats.bodyFat}%, BMI ${bmi}
+  const prompt = `ข้อมูลผู้ใช้: น้ำหนัก ${stats.weight}kg, ส่วนสูง ${stats.height}cm, ไขมัน ${stats.bodyFat}%, BMI ${bmi}
 เป้าหมายของผู้ใช้วันนี้: "${stats.goal || 'ออกกำลังให้สุขภาพดี'}"
 บริบท: เหนื่อยล้า ${ctx.fatigue}/9, สถานที่="${ctx.location}", อากาศ="${ctx.weather}"
+ค่ากำหนด (ห้ามเปลี่ยน): sets=${sets}, reps=${reps}
 
-กฎสำคัญที่สุด — ห้ามฝ่าฝืน:
-- ผู้ใช้กำหนดไว้แล้วว่า sets=${sets} และ reps=${reps} สำหรับท่าที่เลือก
-- คุณต้องเลือกท่าที่เหมาะสมกับ "เป้าหมาย" และ "บริบท" ของผู้ใช้มากที่สุด (ไม่จำเป็นต้องครบทุกท่า)
-- หากเป้าหมายระบุเจาะจง เช่น "เน้นขา" ให้เลือกเฉพาะท่าที่เกี่ยวข้อง (เช่น squat, lunge, jumpingjack)
-- สำหรับท่าที่ไม่เลือก ให้กำหนดค่า sets: 0
-- plank ใช้ sets=${sets} หรือ 0, hold_sec ตามสมควร (15-60 วินาที)
-- rest_sec ปรับได้ตามความเหมาะสม (20-90 วินาที)
-- เลือก mode จากจำนวน sets: sets>=3 → "full", sets=2 → "moderate", sets=1 → "micro"
-- เป้าหมายผู้ใช้: ปรับสารใน message/motivation ให้ตรงกับเป้าหมายนี้
+ท่าออกกำลังที่มีให้เลือกและประเภท:
+- pushup: อก, แขนหลัง (Upper Body)
+- squat: ขา, ก้น (Lower Body)
+- plank: แกนกลางลำตัว (Core)
+- lunge: ขา, ก้น (Lower Body)
+- situp: หน้าท้อง (Core)
+- jumpingjack: หัวใจ, ขา (Cardio/Full Body)
 
-ท่าออกกำลังที่มีให้เลือก: pushup, squat, plank, lunge, situp, jumpingjack
-ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
-{"mode":"moderate","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":${sets},"reps":${reps},"rest_sec":45},"squat":{"sets":${sets},"reps":${reps},"rest_sec":45},"plank":{"sets":${sets},"hold_sec":30,"rest_sec":30},"lunge":{"sets":${sets},"reps":${reps},"rest_sec":45},"situp":{"sets":${sets},"reps":${reps},"rest_sec":45},"jumpingjack":{"sets":${sets},"reps":${reps},"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
+ตอบกลับเป็น JSON ตามโครงสร้างนี้เท่านั้น (ห้ามมี markdown):
+{"mode":"moderate","message":"...","motivation":"...","pushup":{"sets":${sets},"reps":${reps},"rest_sec":45},"squat":{"sets":${sets},"reps":${reps},"rest_sec":45},"plank":{"sets":${sets},"hold_sec":30,"rest_sec":30},"lunge":{"sets":${sets},"reps":${reps},"rest_sec":45},"situp":{"sets":${sets},"reps":${reps},"rest_sec":45},"jumpingjack":{"sets":${sets},"reps":${reps},"rest_sec":30},"form_tip":"...","estimated_duration_min":8}`;
 
   // ดึง API Key จาก Environment Variables
   const GROQ_KEY = process.env.GROQ_API_KEY;
@@ -63,10 +59,20 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
           messages: [
-            { role: "system", content: "คุณคือ AI Personal Trainer ตอบกลับเป็น JSON เท่านั้น ห้ามมี markdown หรือข้อความอื่น" },
+            { 
+              role: "system", 
+              content: `คุณคือ "The Adaptable Shadow" AI Personal Trainer ผู้เชี่ยวชาญการปรับโปรแกรมตามเป้าหมาย
+
+กฎเหล็กที่คุณต้องปฏิบัติตามอย่างเคร่งครัด:
+1. วิเคราะห์ "เป้าหมาย" ของผู้ใช้อย่างละเอียด
+2. หากเป้าหมายระบุส่วนใดส่วนหนึ่ง (เช่น "เน้นขา", "Leg Day", "ลดพุง") ให้เลือกเฉพาะท่าที่เกี่ยวข้องโดยตรงเท่านั้น
+3. สำหรับท่าที่ไม่เกี่ยวข้องกับเป้าหมาย ให้ตั้งค่า "sets": 0 เสมอ (ห้ามแอบใส่มาถ้าไม่จำเป็น)
+4. ใช้ค่า sets และ reps ที่กำหนดให้สำหรับท่าที่เลือก (ยกเว้น plank ให้ใช้ hold_sec)
+5. ตอบกลับเป็น JSON บริสุทธิ์เท่านั้น ห้ามมีคำอธิบายหรือ Markdown ใดๆ ทั้งสิ้น` 
+            },
             { role: "user", content: prompt }
           ],
-          temperature: 0.7,
+          temperature: 0.2,
           max_tokens: 1024,
           response_format: { type: "json_object" }
         })
