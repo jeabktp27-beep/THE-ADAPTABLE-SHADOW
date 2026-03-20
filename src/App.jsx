@@ -285,7 +285,7 @@ function ModeChip({ mode }) {
 function PageProfile({ stats, setStats, onNext, onQuickStart, hasLastPlan }) {
  const estimateBodyFat = () => {
  const bmi = stats.weight / (stats.height / 100) ** 2;
- const estimated = Math.round((1.2 * bmi + 0.23 * 25 - 5.4) * 10) / 10;
+ const estimated = Math.round((1.2 * bmi + 0.23 * (stats.age || 25) - (stats.gender === "female" ? 5.4 : 16.2)) * 10) / 10;
  setStats(s => ({ ...s, bodyFat: Math.max(5, Math.min(50, estimated)) }));
  };
 
@@ -294,7 +294,23 @@ function PageProfile({ stats, setStats, onNext, onQuickStart, hasLastPlan }) {
  <div style={{ marginBottom: "32px" }}>
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "4px", color: "#00ff8855", marginBottom: "10px" }}>AI ANALYSIS</div>
  <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>ข้อมูล<span style={{ color: "#00ff88" }}>ของคุณ</span></h1>
- <p style={{ color: "#ffffff44", fontFamily: "'Space Mono',monospace", fontSize: "11px", marginTop: "12px", lineHeight: 1.8 }}>ระบุเป้าหมายเพื่อให้ AI ออกแบบโปรแกรมที่ใช่สำหรับคุณ</p>
+ <p style={{ color: "#ffffff44", fontFamily: "'Space Mono',monospace", fontSize: "11px", marginTop: "12px", lineHeight: 1.8 }}>ระบุข้อมูลร่างกายเพื่อการคำนวณแคลอรี่ที่แม่นยำ</p>
+ </div>
+
+ {/* เพศ และ อายุ */}
+ <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+   <div style={{ background: "#12141d", border: "1px solid #ffffff11", borderRadius: "12px", padding: "16px" }}>
+     <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#00ff8877", marginBottom: "8px" }}>เพศ</div>
+     <div style={{ display: "flex", gap: "8px" }}>
+       {["male", "female"].map(g => (
+         <button key={g} onClick={() => setStats(s => ({ ...s, gender: g }))} style={{ flex: 1, padding: "8px", background: stats.gender === g ? "#00ff88" : "#0d0f18", border: "1px solid #ffffff15", borderRadius: "6px", color: stats.gender === g ? "#0a0a12" : "#ffffff44", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>{g === "male" ? "ชาย" : "หญิง"}</button>
+       ))}
+     </div>
+   </div>
+   <div style={{ background: "#12141d", border: "1px solid #ffffff11", borderRadius: "12px", padding: "16px" }}>
+     <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#00ff8877", marginBottom: "8px" }}>อายุ</div>
+     <input type="number" value={stats.age || 25} onChange={e => setStats(s => ({ ...s, age: parseInt(e.target.value) }))} style={{ width: "100%", background: "#0d0f18", border: "1px solid #ffffff15", borderRadius: "6px", padding: "8px", color: "#00ff88", fontFamily: "'Space Mono',monospace", textAlign: "center", outline: "none" }} />
+   </div>
  </div>
 
  {/* ชื่อเล่น */}
@@ -465,12 +481,22 @@ function PagePlan({ plan, onStart, onStartGuided, onBack, onHistory, onDashboard
  { key: "jumpingjack", label: "Jumping Jack", img: "/exercises/jumpingjack.png", stat: `${plan.jumpingjack?.sets ?? 0}×${plan.jumpingjack?.reps ?? 0}`, sub: `พัก ${plan.jumpingjack?.rest_sec ?? 0}วิ`, accent: "#ff3366" },
  ].filter(ex => plan[ex.key] && (plan[ex.key].sets ?? 0) > 0);
 
+ // คำนวณแคลอรี่โดยประมาณของทั้งแผน
+ const totalEstimatedKcal = exercises.reduce((sum, ex) => {
+   const p = plan[ex.key];
+   const totalReps = p.sets * (ex.key === "plank" ? p.hold_sec : p.reps);
+   // ประมาณเวลา: 1 rep = 3 วิ, plank 1s = 1s, บวกเวลาพัก
+   const estimatedSec = (ex.key === "plank" ? totalReps : totalReps * 3) + (p.sets * p.rest_sec);
+   return sum + estimateCalories(ex.key, totalReps, estimatedSec, 70); // ใช้ 70 เป็นค่ากลาง
+ }, 0);
+
  return (
  <div style={{ maxWidth: "520px", margin: "0 auto", padding: "32px 20px" }}>
  <div style={{ marginBottom: "28px" }}>
  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
  <ModeChip mode={plan.mode} />
  <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff44" }}>{plan.estimated_duration_min} นาที</span>
+ <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ff3366" }}>🔥 ~{Math.round(totalEstimatedKcal)} kcal</span>
  </div>
  <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,5vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>แผนของคุณ <span style={{ background: "linear-gradient(135deg, #00ff88, #00bfff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>พร้อมแล้ว!</span></h1>
  </div>
@@ -1340,6 +1366,7 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  const [cameraErr, setCameraErr] = useState(null), [done, setDone] = useState(false);
  const [startTime] = useState(Date.now());
  const [elapsed, setElapsed] = useState(0);
+ const [currentKcal, setCurrentKcal] = useState(0);
  const lastRepTimeRef = useRef(0); // ป้องกันการนับซ้ำซ้อน
  const DEBOUNCE_TIME = 1000; // ปรับลดเหลือ 1 วินาทีตามความต้องการของผู้ใช้
  const exPlan = plan[exercise];
@@ -1349,10 +1376,14 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  useEffect(() => { streamRef.current = initialStream || null; }, [initialStream]);
  useEffect(() => { 
    const t = setInterval(() => {
-     setElapsed(Math.floor((Date.now() - startTime) / 1000));
+     const sec = Math.floor((Date.now() - startTime) / 1000);
+     setElapsed(sec);
+     // คำนวณแคลอรี่แบบ Real-time
+     const kcal = estimateCalories(exercise, counterRef.current, sec, weightKg || 65);
+     setCurrentKcal(kcal);
    }, 1000); 
    return () => clearInterval(t); 
- }, [startTime]);
+ }, [startTime, exercise, weightKg]);
 
  useEffect(() => {
  if (!mediapipeReady) return;
@@ -1593,8 +1624,8 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  }
  setAngle(Math.round(ang)); setFormOk(ok); setFeedback(fb);
  } catch (_) { }
- drawHUD(ctx2d, W, H, counterRef.current, setNumRef.current, isPlank ? exPlan.hold_sec : exPlan.reps, exPlan.sets, Math.round(ang), ok, fb, stageRef.current, elapsed);
- }, [exercise, exPlan, elapsed, isPlank]);
+ drawHUD(ctx2d, W, H, counterRef.current, setNumRef.current, isPlank ? exPlan.hold_sec : exPlan.reps, exPlan.sets, Math.round(ang), ok, fb, stageRef.current, elapsed, currentKcal);
+ }, [exercise, exPlan, elapsed, isPlank, currentKcal]);
 
  function startRest() {
  if (finishedRef.current) return;
@@ -1615,12 +1646,17 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  else setDone(true);
  }
 
- function drawHUD(ctx2d, W, H, cnt, sn, tr, ts, ang, ok, fb, stage, el) {
+ function drawHUD(ctx2d, W, H, cnt, sn, tr, ts, ang, ok, fb, stage, el, kcal) {
  ctx2d.fillStyle = "rgba(6,8,16,0.75)"; ctx2d.fillRect(0, 0, W, 70);
  ctx2d.fillStyle = "#00ff88"; ctx2d.font = "bold 13px 'Space Mono',monospace";
  const exLabel = exNames[exercise] || exercise.toUpperCase();
  ctx2d.fillText(exLabel, 20, 28);
  ctx2d.fillStyle = "#ffffff66"; ctx2d.font = "11px 'Space Mono',monospace"; ctx2d.fillText(`SET ${sn}/${ts}`, 20, 50);
+
+ // แคลอรี่แบบ Real-time
+ ctx2d.fillStyle = "#ff3366"; ctx2d.font = "bold 12px 'Space Mono',monospace";
+ ctx2d.fillText(`⚡ ${kcal} kcal`, 20, 65);
+
  ctx2d.fillStyle = "#ffd700"; ctx2d.font = "bold 42px 'Space Mono',monospace";
  const repStr = isPlank ? `${cnt}s` : `${cnt}/${tr}`; ctx2d.fillText(repStr, W / 2 - ctx2d.measureText(repStr).width / 2, 52);
  ctx2d.fillStyle = stage === "up" ? "#00ff88" : "#ff9800"; ctx2d.font = "bold 11px 'Space Mono',monospace"; ctx2d.fillText(isPlank ? "HOLD" : stage.toUpperCase(), W - 120, 28);
