@@ -1312,6 +1312,7 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  const videoRef = useRef(null), canvasRef = useRef(null), poseRef = useRef(null);
  const streamRef = useRef(null), rafRef = useRef(null);
  const stageRef = useRef("up"), counterRef = useRef(0), setNumRef = useRef(1), restingRef = useRef(false);
+ const finishedRef = useRef(false); // ป้องกันการเรียก finishSet/startRest ซ้ำซ้อน
  const lastCountTimeRef = useRef(0);
  const badFormCounterRef = useRef(0); // นับ rep ที่ทำผิดท่า: ทุก 2 ครั้งผิด = 1 ครั้งถูก
  const plankHoldRef = useRef(0), plankIntervalRef = useRef(null), plankActiveRef = useRef(false);
@@ -1329,7 +1330,12 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  const exNames = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE", situp: "SIT-UP", jumpingjack: "JUMPING JACK" };
 
  useEffect(() => { streamRef.current = initialStream || null; }, [initialStream]);
- useEffect(() => { const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000); return () => clearInterval(t); }, [startTime]);
+ useEffect(() => { 
+   const t = setInterval(() => {
+     setElapsed(Math.floor((Date.now() - startTime) / 1000));
+   }, 1000); 
+   return () => clearInterval(t); 
+ }, [startTime]);
 
  useEffect(() => {
  if (!mediapipeReady) return;
@@ -1365,6 +1371,7 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  }, [mediapipeReady]);
 
  const handleResults = useCallback((results) => {
+ if (finishedRef.current) return;
  const canvas = canvasRef.current, video = videoRef.current;
  if (!canvas || !video) return;
  const ctx2d = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
@@ -1396,15 +1403,25 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  // DEBOUNCE: ตรวจสอบว่าผ่านไป 3.5 วินาทีหรือยังตั้งแต่ครั้งล่าสุด
  const now = Date.now();
  if (now - lastRepTimeRef.current > DEBOUNCE_TIME) {
- lastRepTimeRef.current = now;
- if (ok) {
- counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
- } else {
- badFormCounterRef.current += 1;
- if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+   // กฎ: นับคะแนนเฉพาะเมื่อ ok (Form ถูกต้อง) 
+   // หรือถ้าทำผิด 2 ครั้ง (badFormCounterRef.current >= 2) ถึงจะนับเป็น 1 ครั้ง
+   if (ok) {
+     lastRepTimeRef.current = now; // อัปเดตเวลาเฉพาะเมื่อมีการนับคะแนนจริง
+     counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
+   } else {
+     badFormCounterRef.current += 1;
+     if (badFormCounterRef.current >= 2) { 
+       lastRepTimeRef.current = now; // อัปเดตเวลาเมื่อนับคะแนนจากท่าที่ผิดสะสม
+       badFormCounterRef.current = 0; 
+       counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); 
+     }
+   }
+   console.log(`[DEBUG] Push-up Count: ${counterRef.current}/${exPlan.reps}, Set: ${setNumRef.current}/${exPlan.sets}`);
  }
+ if (counterRef.current >= exPlan.reps) { 
+ if (setNumRef.current < exPlan.sets) startRest(); 
+ else finishSet(); 
  }
- if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
  }
  } else if (exercise === "squat" || exercise === "lunge") {
  const hip = lm(landmarks, LM.L_HIP), knee = lm(landmarks, LM.L_KNEE), ankle = lm(landmarks, LM.L_ANKLE);
@@ -1428,15 +1445,23 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  // DEBOUNCE: ตรวจสอบว่าผ่านไป 3.5 วินาทีหรือยังตั้งแต่ครั้งล่าสุด
  const now = Date.now();
  if (now - lastRepTimeRef.current > DEBOUNCE_TIME) {
- lastRepTimeRef.current = now;
- if (ok) {
- counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
- } else {
- badFormCounterRef.current += 1;
- if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+   if (ok) {
+     lastRepTimeRef.current = now;
+     counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
+   } else {
+     badFormCounterRef.current += 1;
+     if (badFormCounterRef.current >= 2) { 
+       lastRepTimeRef.current = now;
+       badFormCounterRef.current = 0; 
+       counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); 
+     }
+   }
+   console.log(`[DEBUG] ${exercise.toUpperCase()} Count: ${counterRef.current}/${exPlan.reps}, Set: ${setNumRef.current}/${exPlan.sets}`);
  }
+ if (counterRef.current >= exPlan.reps) { 
+ if (setNumRef.current < exPlan.sets) startRest(); 
+ else finishSet(); 
  }
- if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
  }
  } else if (exercise === "situp") {
  const shoulder = lm(landmarks, LM.L_SHOULDER), hip = lm(landmarks, LM.L_HIP), knee = lm(landmarks, LM.L_KNEE);
@@ -1455,15 +1480,23 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  // DEBOUNCE: ตรวจสอบว่าผ่านไป 3.5 วินาทีหรือยังตั้งแต่ครั้งล่าสุด
  const now = Date.now();
  if (now - lastRepTimeRef.current > DEBOUNCE_TIME) {
- lastRepTimeRef.current = now;
- if (ok) {
- counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
- } else {
- badFormCounterRef.current += 1;
- if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+   if (ok) {
+     lastRepTimeRef.current = now;
+     counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
+   } else {
+     badFormCounterRef.current += 1;
+     if (badFormCounterRef.current >= 2) { 
+       lastRepTimeRef.current = now;
+       badFormCounterRef.current = 0; 
+       counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); 
+     }
+   }
+   console.log(`[DEBUG] Sit-up Count: ${counterRef.current}/${exPlan.reps}, Set: ${setNumRef.current}/${exPlan.sets}`);
  }
+ if (counterRef.current >= exPlan.reps) { 
+ if (setNumRef.current < exPlan.sets) startRest(); 
+ else finishSet(); 
  }
- if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
  }
  } else if (exercise === "jumpingjack") {
  const hip = lm(landmarks, LM.L_HIP), shoulder = lm(landmarks, LM.L_SHOULDER), wrist = lm(landmarks, LM.L_WRIST);
@@ -1490,15 +1523,23 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  // DEBOUNCE: ตรวจสอบว่าผ่านไป 3.5 วินาทีหรือยังตั้งแต่ครั้งล่าสุด
  const now = Date.now();
  if (now - lastRepTimeRef.current > DEBOUNCE_TIME) {
- lastRepTimeRef.current = now;
- if (ok) {
- counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
- } else {
- badFormCounterRef.current += 1;
- if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+   if (ok) {
+     lastRepTimeRef.current = now;
+     counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
+   } else {
+     badFormCounterRef.current += 1;
+     if (badFormCounterRef.current >= 2) { 
+       lastRepTimeRef.current = now;
+       badFormCounterRef.current = 0; 
+       counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); 
+     }
+   }
+   console.log(`[DEBUG] Jumping Jack Count: ${counterRef.current}/${exPlan.reps}, Set: ${setNumRef.current}/${exPlan.sets}`);
  }
+ if (counterRef.current >= exPlan.reps) { 
+ if (setNumRef.current < exPlan.sets) startRest(); 
+ else finishSet(); 
  }
- if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
  }
  } else if (isPlank) {
  const shoulder = lm(landmarks, LM.L_SHOULDER), hip = lm(landmarks, LM.L_HIP), ankle = lm(landmarks, LM.L_ANKLE);
@@ -1518,10 +1559,11 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  else { fb = " Hold it! ค้างไว้"; }
  if (!ok) Sound.error();
  // MULTI-JOINT: นับเวลาเฉพาะตอน form ถูกทุกข้อเท่านั้น
- if (ok && !plankActiveRef.current && !restingRef.current) {
+ if (ok && !plankActiveRef.current && !restingRef.current && !finishedRef.current) {
  plankActiveRef.current = true;
  plankIntervalRef.current = setInterval(() => {
  plankHoldRef.current += 1; setCounter(plankHoldRef.current); Sound.tick();
+ console.log(`[DEBUG] Plank Hold: ${plankHoldRef.current}/${exPlan.hold_sec}, Set: ${setNumRef.current}/${exPlan.sets}`);
  if (plankHoldRef.current >= exPlan.hold_sec) {
  clearInterval(plankIntervalRef.current); plankHoldRef.current = 0; plankActiveRef.current = false;
  if (setNumRef.current < exPlan.sets) startRest(); else finishSet();
@@ -1538,6 +1580,7 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  }, [exercise, exPlan, elapsed, isPlank]);
 
  function startRest() {
+ if (finishedRef.current) return;
  restingRef.current = true; setIsResting(true); counterRef.current = 0; setCounter(0); badFormCounterRef.current = 0; if (isPlank) plankHoldRef.current = 0;
  setNumRef.current += 1; setSetNum(setNumRef.current);
  let t = exPlan.rest_sec; setRestCountdown(t);
@@ -1545,7 +1588,10 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  }
 
  function finishSet() {
+ if (finishedRef.current) return;
+ finishedRef.current = true;
  if (isPlank && plankIntervalRef.current) clearInterval(plankIntervalRef.current);
+ if (rafRef.current) cancelAnimationFrame(rafRef.current);
  Sound.complete();
  const cal = estimateCalories(exercise, exPlan.sets * (isPlank ? exPlan.hold_sec : exPlan.reps), elapsed, weightKg || 65);
  if (onDone) onDone({ exercise, exPlan, sets: exPlan.sets, totalReps: exPlan.sets * (isPlank ? exPlan.hold_sec : exPlan.reps), elapsed, calories: cal });
