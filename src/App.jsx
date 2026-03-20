@@ -1324,7 +1324,7 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  const [startTime] = useState(Date.now());
  const [elapsed, setElapsed] = useState(0);
  const lastRepTimeRef = useRef(0); // ป้องกันการนับซ้ำซ้อน
- const DEBOUNCE_TIME = 3500; // 3.5 วินาที
+ const DEBOUNCE_TIME = 1000; // ปรับลดเหลือ 1 วินาทีตามความต้องการของผู้ใช้
  const exPlan = plan[exercise];
  const isPlank = exercise === "plank";
  const exNames = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE", situp: "SIT-UP", jumpingjack: "JUMPING JACK" };
