@@ -1754,11 +1754,11 @@ export default function AdaptableShadow() {
  setWorkoutResult({ ...result, calories: totalCal, elapsed: totalTime, isGuided: true, exercises: allResults });
  setPage("summary");
  } else {
- // ไม่ได้อยู่ใน guided mode
- setWorkoutResult(result);
- setPage("summary");
- }
- };
+      // ไม่ได้อยู่ใน guided mode
+      setWorkoutResult(result);
+      setPage("plan");
+    }
+  };
 
  const handleAnalyze = async () => {
  setLoading(true); setPlanError(null); setPage("planning");
