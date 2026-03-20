@@ -16,28 +16,30 @@ export default async function handler(req, res) {
   const bmi = (stats.weight / (stats.height / 100) ** 2).toFixed(1);
   const prompt = `ข้อมูลผู้ใช้: น้ำหนัก ${stats.weight}kg, ส่วนสูง ${stats.height}cm, ไขมัน ${stats.bodyFat}%, BMI ${bmi}
 เป้าหมายวันนี้: "${stats.goal || 'ออกกำลังให้สุขภาพดี'}"
-ความเหนื่อยล้าปัจจุบัน: ${ctx.fatigue}/9 (ค่าที่เหมาะสมคือ sets=${sets}, reps=${reps})
+ความเหนื่อยล้า: ${ctx.fatigue}/9 (ค่าที่เหมาะสม: sets=${sets}, reps=${reps})
 
-แนวทางการจัดตาราง (Guidelines):
-1. การเลือกท่า: "ควร" เลือกท่าที่เกี่ยวข้องกับเป้าหมายเป็นอันดับแรก (เช่น ถ้าเป้าหมายคือ "ขา" แนะนำให้มี squat หรือ lunge)
-2. จำนวนครั้ง: "แนะนำ" ให้ใช้ค่าประมาณ sets=${sets} และ reps=${reps} เพื่อความเหมาะสมกับความเหนื่อยล้า
-3. การจัดการท่าอื่นๆ: หากท่าไหนไม่จำเป็นจริงๆ สามารถตั้ง sets เป็น 0 ได้เลย เพื่อให้หน้าเว็บดูสะอาดตาและตรงจุด
-4. ความยืดหยุ่น: คุณสามารถปรับเปลี่ยนท่าหรือจำนวนครั้งได้เล็กน้อยตามความเหมาะสมของร่างกายผู้ใช้ แต่ควรคงโครงสร้าง JSON เดิมไว้เสมอ
+กฎเหล็ก (ห้ามฝ่าฝืน):
+1. เลือกเฉพาะท่าที่ "เกี่ยวข้องโดยตรง" กับเป้าหมายเท่านั้น
+2. ท่าที่เลือก: ให้ใช้ sets=${sets}, reps=${reps} เท่านั้น
+3. ท่าที่ไม่เลือก: ต้องตั้งค่า sets เป็น 0 และ reps เป็น 0 เสมอ
+4. ห้ามแสดงท่าที่ไม่เกี่ยวข้องกับเป้าหมายเด็ดขาด (เช่น เป้าหมายคือ "ขา" ห้ามใส่ pushup หรือ situp มาเป็นตัวเลขเด็ดขาด)
 
-ตอบกลับเป็น JSON บริสุทธิ์ (ห้ามมี markdown):
+ตัวอย่างการตอบกลับที่ถูกต้อง (หากเป้าหมายคือ "เน้นขา"):
 {
   "mode": "moderate",
-  "message": "...",
-  "motivation": "...",
+  "message": "เน้นช่วงล่างเพื่อความแข็งแรงของขาครับ",
+  "motivation": "สู้ๆ ครับ ขาแข็งแรงเดินเหินสะดวก!",
   "pushup": {"sets": 0, "reps": 0, "rest_sec": 45},
-  "squat": {"sets": 0, "reps": 0, "rest_sec": 45},
+  "squat": {"sets": ${sets}, "reps": ${reps}, "rest_sec": 45},
   "plank": {"sets": 0, "hold_sec": 30, "rest_sec": 30},
-  "lunge": {"sets": 0, "reps": 0, "rest_sec": 45},
+  "lunge": {"sets": ${sets}, "reps": ${reps}, "rest_sec": 45},
   "situp": {"sets": 0, "reps": 0, "rest_sec": 45},
   "jumpingjack": {"sets": 0, "reps": 0, "rest_sec": 30},
-  "form_tip": "...",
-  "estimated_duration_min": 8
-}`;
+  "form_tip": "ทิ้งน้ำหนักลงที่ส้นเท้าเวลาทำ squat",
+  "estimated_duration_min": 6
+}
+
+ตอบกลับเป็น JSON บริสุทธิ์เท่านั้น:`;
 
   // ดึง API Key จาก Environment Variables
   const GROQ_KEY = process.env.GROQ_API_KEY;
