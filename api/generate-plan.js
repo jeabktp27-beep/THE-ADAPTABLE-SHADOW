@@ -34,14 +34,13 @@ export default async function handler(req, res) {
 ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
 {"mode":"moderate","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":${sets},"reps":${reps},"rest_sec":45},"squat":{"sets":${sets},"reps":${reps},"rest_sec":45},"plank":{"sets":${sets},"hold_sec":30,"rest_sec":30},"lunge":{"sets":${sets},"reps":${reps},"rest_sec":45},"situp":{"sets":${sets},"reps":${reps},"rest_sec":45},"jumpingjack":{"sets":${sets},"reps":${reps},"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
 
-  // ดึง API Key จาก Environment Variables และลบอักขระแปลกปลอม
-  const rawKey = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_KEY || process.env.CLAUDE_API_KEY;
-  const ANTHROPIC_KEY = rawKey ? rawKey.trim().replace(/[^\x21-\x7E]/g, '') : null;
+  // ดึง API Key จาก Environment Variables
+  const GROQ_KEY = process.env.GROQ_API_KEY;
 
-  if (!ANTHROPIC_KEY) {
-    console.error("Missing API Key in Environment Variables");
+  if (!GROQ_KEY) {
+    console.error("Missing GROQ_API_KEY in Environment Variables");
     return res.status(500).json({ 
-      message: "⚠️ ระบบยังไม่ได้ตั้งค่า API Key กรุณาเพิ่ม ANTHROPIC_API_KEY ใน Vercel Settings และทำการ Redeploy" 
+      message: "⚠️ ระบบยังไม่ได้ตั้งค่า API Key กรุณาเพิ่ม GROQ_API_KEY ใน Vercel Settings และทำการ Redeploy" 
     });
   }
 
@@ -53,25 +52,23 @@ export default async function handler(req, res) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       // ============================================================
-      // เรียก Anthropic API (Claude)
+      // เรียก Groq API (OpenAI-compatible format)
       // ============================================================
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_KEY,
-          "anthropic-version": "2023-06-01"
+          "Authorization": `Bearer ${GROQ_KEY.trim()}`
         },
         body: JSON.stringify({
-          model: "claude-3-5-sonnet-20240620",
-          max_tokens: 1024,
+          model: "llama-3.3-70b-versatile",
           messages: [
-            {
-              role: "user",
-              content: prompt
-            }
+            { role: "system", content: "คุณคือ AI Personal Trainer ตอบกลับเป็น JSON เท่านั้น ห้ามมี markdown หรือข้อความอื่น" },
+            { role: "user", content: prompt }
           ],
-          system: "คุณคือ AI Personal Trainer ตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นหรือ markdown"
+          temperature: 0.7,
+          max_tokens: 1024,
+          response_format: { type: "json_object" }
         })
       });
 
@@ -86,25 +83,14 @@ export default async function handler(req, res) {
       // ถ้า Error อื่น
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Anthropic API Error:", response.status, errorText);
-        
-        // ส่งรายละเอียด Error กลับไปให้ User เห็นชัดๆ เพื่อหาสาเหตุ
-        let detail = "";
-        try {
-          const errJson = JSON.parse(errorText);
-          detail = errJson.error?.message || errorText;
-        } catch (e) {
-          detail = errorText;
-        }
-
-        return res.status(response.status).json({ 
-          message: `⚠️ AI Error (${response.status}): ${detail.substring(0, 150)}` 
-        });
+        console.error("Groq API Error:", response.status, errorText);
+        const friendlyMsg = getFriendlyErrorMessage(response.status, errorText);
+        return res.status(response.status).json({ message: friendlyMsg });
       }
 
-      // สำเร็จ! ดึง JSON จาก Anthropic response
+      // สำเร็จ! ดึง JSON จาก Groq response
       const data = await response.json();
-      const text = data.content?.[0]?.text || "{}";
+      const text = data.choices?.[0]?.message?.content || "{}";
 
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) {
@@ -148,18 +134,18 @@ export default async function handler(req, res) {
 function getFriendlyErrorMessage(status, errorText) {
   switch (status) {
     case 400:
-      return `⚠️ ข้อมูลไม่ถูกต้อง: ${errorText.substring(0, 80)}`;
+      return "⚠️ ข้อมูลที่ส่งไปไม่ถูกต้อง กรุณาลองใหม่";
     case 401:
-      return "🔐 API Key ไม่ถูกต้อง หรือไม่มีสิทธิ์เข้าถึง (401)";
+      return "🔐 API Key ของ Groq ไม่ถูกต้อง (401)";
     case 403:
-      return "🚫 API Key ถูกระงับ หรือโดนบล็อกการเข้าถึง (403)";
-    case 404:
-      return "❌ ไม่พบโมเดล AI (404) กรุณาแจ้งผู้ดูแลระบบ";
+      return "🚫 การเข้าถึงถูกปฏิเสธ (403)";
+    case 413:
+      return "📦 ข้อมูลใหญ่เกินไปสำหรับ AI (413)";
     case 429:
-      return "🔥 โควตา AI เต็ม หรือโดนจำกัดความเร็ว (429) กรุณารอสักครู่";
+      return "🔥 Groq จำกัดความเร็ว (Rate Limit) กรุณารอสักครู่";
     case 500:
     case 503:
-      return "🛠️ เซิร์ฟเวอร์ Anthropic ขัดข้อง (5xx) กรุณาลองใหม่ภายหลัง";
+      return "🛠️ เซิร์ฟเวอร์ Groq ขัดข้อง (5xx) กรุณาลองใหม่ภายหลัง";
     default:
       return `⚠️ เกิดข้อผิดพลาดจาก AI (Status: ${status})`;
   }
