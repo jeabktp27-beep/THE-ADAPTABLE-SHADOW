@@ -16,13 +16,6 @@ function saveLS(key, val) {
  try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
 }
 
-// คำนวณแคลอรี่โดยประมาณ (MET x weight x time)
-function estimateCalories(exercise, totalReps, totalSec, weightKg) {
- const met = { pushup: 3.8, squat: 5.0, plank: 3.0, lunge: 4.0, situp: 3.5, jumpingjack: 7.0 };
- const m = met[exercise] || 4.0;
- return Math.round(m * weightKg * (totalSec / 3600));
-}
-
 // บันทึกประวัติการออกกำลังลง localStorage
 function saveWorkoutSession(session) {
  const history = loadLS(LS_HISTORY, []);
@@ -422,7 +415,18 @@ function PagePlan({ plan, onStart, onStartGuided, onBack, onHistory, onDashboard
 
  const getCalendarUrl = () => {
  const title = encodeURIComponent(`The Adaptable Shadow: ${plan.mode.toUpperCase()} WORKOUT`);
- const details = encodeURIComponent(`ตารางวันนี้:\n${plan.message}\nPush-up: ${plan.pushup.sets}x${plan.pushup.reps}\nSquat: ${plan.squat.sets}x${plan.squat.reps}`);
+ const activeExercises = [
+ { name: "Push-up", data: plan.pushup },
+ { name: "Squat", data: plan.squat },
+ { name: "Plank", data: plan.plank },
+ { name: "Lunge", data: plan.lunge },
+ { name: "Sit-up", data: plan.situp },
+ { name: "Jumping Jack", data: plan.jumpingjack },
+ ].filter(ex => ex.data && ex.data.sets > 0)
+ .map(ex => `${ex.name}: ${ex.data.sets}x${ex.data.reps || ex.data.hold_sec + "s"}`)
+ .join("\n");
+ 
+ const details = encodeURIComponent(`ตารางวันนี้:\n${plan.message}\n\n${activeExercises}`);
  const now = new Date();
  const startObj = new Date(now.getTime() + 10 * 60000);
  const endObj = new Date(startObj.getTime() + (plan.estimated_duration_min * 60000));
@@ -432,13 +436,13 @@ function PagePlan({ plan, onStart, onStartGuided, onBack, onHistory, onDashboard
  };
 
  const exercises = [
- { key: "pushup", label: "Push-up", img: "/exercises/pushup.png", stat: `${plan.pushup.sets}×${plan.pushup.reps}`, sub: `พัก ${plan.pushup.rest_sec}วิ`, accent: "#00ff88" },
- { key: "squat", label: "Squat", img: "/exercises/squat.png", stat: `${plan.squat.sets}×${plan.squat.reps}`, sub: `พัก ${plan.squat.rest_sec}วิ`, accent: "#00bfff" },
- { key: "plank", label: "Plank", img: "/exercises/plank.png", stat: `${plan.plank.sets}×${plan.plank.hold_sec}s`, sub: `พัก ${plan.plank.rest_sec}วิ`, accent: "#ffd700" },
- { key: "lunge", label: "Lunge", img: "/exercises/lunge.png", stat: `${plan.lunge.sets}×${plan.lunge.reps}`, sub: `พัก ${plan.lunge.rest_sec}วิ`, accent: "#ff6633" },
- { key: "situp", label: "Sit-up", img: "/exercises/situp.png", stat: `${plan.situp.sets}×${plan.situp.reps}`, sub: `พัก ${plan.situp.rest_sec}วิ`, accent: "#a855f7" },
- { key: "jumpingjack", label: "Jumping Jack", img: "/exercises/jumpingjack.png", stat: `${plan.jumpingjack.sets}×${plan.jumpingjack.reps}`, sub: `พัก ${plan.jumpingjack.rest_sec}วิ`, accent: "#ff3366" },
- ];
+ { key: "pushup", label: "Push-up", img: "/exercises/pushup.png", stat: `${plan.pushup?.sets}×${plan.pushup?.reps}`, sub: `พัก ${plan.pushup?.rest_sec}วิ`, accent: "#00ff88" },
+ { key: "squat", label: "Squat", img: "/exercises/squat.png", stat: `${plan.squat?.sets}×${plan.squat?.reps}`, sub: `พัก ${plan.squat?.rest_sec}วิ`, accent: "#00bfff" },
+ { key: "plank", label: "Plank", img: "/exercises/plank.png", stat: `${plan.plank?.sets}×${plan.plank?.hold_sec}s`, sub: `พัก ${plan.plank?.rest_sec}วิ`, accent: "#ffd700" },
+ { key: "lunge", label: "Lunge", img: "/exercises/lunge.png", stat: `${plan.lunge?.sets}×${plan.lunge?.reps}`, sub: `พัก ${plan.lunge?.rest_sec}วิ`, accent: "#ff6633" },
+ { key: "situp", label: "Sit-up", img: "/exercises/situp.png", stat: `${plan.situp?.sets}×${plan.situp?.reps}`, sub: `พัก ${plan.situp?.rest_sec}วิ`, accent: "#a855f7" },
+ { key: "jumpingjack", label: "Jumping Jack", img: "/exercises/jumpingjack.png", stat: `${plan.jumpingjack?.sets}×${plan.jumpingjack?.reps}`, sub: `พัก ${plan.jumpingjack?.rest_sec}วิ`, accent: "#ff3366" },
+ ].filter(ex => plan[ex.key] && plan[ex.key].sets > 0);
 
  return (
  <div style={{ maxWidth: "520px", margin: "0 auto", padding: "32px 20px" }}>
@@ -535,20 +539,11 @@ function PageVideoTutorial({ exercise, onNext, onBack }) {
     squat: ["ทิ้งน้ำหนักลงที่ส้นเท้า", "ย่อลงจนสะโพกใกล้ระดับเข่า", "ห้ามให้เข่าหุบเข้าหากัน", "ลำตัวตั้งตรง ห้ามเอนไปข้างหน้า"],
     plank: ["ลำตัวตรงเส้นเดียวตั้งแต่หัวถึงส้นเท้า", "ยกตัวขึ้นจากพื้น ห้ามนอนราบ", "ข้อศอกอยู่ใต้ไหล่พอดี", "หายใจตามปกติ อย่ากลั้นหายใจ"],
     lunge: ["ก้าวขาไปข้างหน้า 1 ก้าวยาว", "สะโพกลงใกล้ระดับเข่า", "เข่าหน้าทำมุม 90° เข่าหลังเกือบถึงพื้น", "ลำตัวตั้งตรง ไม่เอนไปข้างหน้า"],
-    situp: ["นอนหงาย งอเข่าให้มากพอ", "ใช้กล้ามเนื้อหน้าท้องยกตัวขึ้น ห้ามดึงคอ", "ข้อศอกไม่ยื่นหน้าหัว", "หายใจออกตอนขึ้น"],
-    jumpingjack: ["กระโดดกางทั้งแขนและขาพร้อมกัน", "ขาต้องกางออก ไม่ใช่แค่ยกแขน", "แขน 2 ข้างกางออกเท่าๆ กัน", "รักษาจังหวะสม่ำเสมอ"],
-  };
-  const cameraPos = {
-    pushup: { pos: "ด้านข้าง", detail: "วางกล้องด้านข้างลำตัว เห็นทั้งหัว-เท้า" },
-    squat: { pos: "เฉียง 45°", detail: "วางกล้องเฉียง 45° ด้านหน้า" },
-    plank: { pos: "ด้านข้าง", detail: "วางกล้องด้านข้าง ให้เห็นว่ายกตัวขึ้น" },
-    lunge: { pos: "เฉียง 45°", detail: "วางกล้องเฉียงด้านหน้า" },
-    situp: { pos: "ด้านข้าง", detail: "วางกล้องด้านข้าง เห็นลำตัวขึ้น-ลง" },
-    jumpingjack: { pos: "ด้านหน้า", detail: "วางกล้องตรงด้านหน้า ให้เห็นขากาง" },
+    situp: ["นอนหงาย ชันเข่าขึ้น", "ใช้กล้ามเนื้อท้องยกลำตัวขึ้น", "อย่าใช้มือดึงคอ", "ลงช้าๆ อย่างควบคุม"],
+    jumpingjack: ["กระโดดกางขาพร้อมยกแขนขึ้น", "กระโดดหุบขาพร้อมเอาแขนลง", "รักษาจังหวะให้ต่อเนื่อง", "ลงด้วยปลายเท้าเบาๆ"]
   };
   const names = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE", situp: "SIT-UP", jumpingjack: "JUMPING JACK" };
   const accentColors = { pushup: "#00ff88", squat: "#00bfff", plank: "#ffd700", lunge: "#ff6633", situp: "#a855f7", jumpingjack: "#ff3366" };
-  const cam = cameraPos[exercise] || cameraPos.pushup;
   const accent = accentColors[exercise] || "#00ff88";
 
   return (
@@ -558,7 +553,6 @@ function PageVideoTutorial({ exercise, onNext, onBack }) {
         <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(22px,4vw,32px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>{names[exercise] || exercise.toUpperCase()}</h1>
       </div>
 
-      {/* Exercise Image */}
       <div style={{ background: "#111318", border: `1px solid ${accent}22`, borderRadius: "20px", overflow: "hidden", marginBottom: "20px" }}>
         <img
           src={exerciseImages[exercise] || exerciseImages.pushup}
@@ -573,19 +567,6 @@ function PageVideoTutorial({ exercise, onNext, onBack }) {
         </div>
       </div>
 
-      {/* Camera Setup */}
-      <div style={{ background: "#111318", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "18px", marginBottom: "24px" }}>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", letterSpacing: "2px", color: "#ffd70088", marginBottom: "12px" }}>CAMERA SETUP</div>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "15px", fontWeight: 700, color: "#ffd700", marginBottom: "6px" }}>{cam.pos}</div>
-        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff66" }}>{cam.detail}</div>
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "12px" }}>
-          {["ห่าง 1.5-2 เมตร", "ระดับเอว", "เห็นทั้งตัว"].map(t => (
-            <span key={t} style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", padding: "4px 10px", background: "#ffd70008", border: "1px solid #ffd70022", borderRadius: "20px", color: "#ffd70088" }}>{t}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* Action Buttons */}
       <button onClick={onNext}
         style={{ width: "100%", padding: "18px", background: accent, border: "none", borderRadius: "50px", cursor: "pointer", fontFamily: "'Space Mono',monospace", fontSize: "14px", fontWeight: 700, color: "#0a0a12", transition: "all 0.3s", boxShadow: `0 0 30px ${accent}44`, minHeight: "56px", marginBottom: "12px" }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
@@ -597,175 +578,114 @@ function PageVideoTutorial({ exercise, onNext, onBack }) {
 }
 
 
+
+
+
+
+
 // [หน้า Camera Guide] หน้าแนะนำการตั้งกล้องให้ user ก่อนเริ่มออกกำลัง
 function PageCameraGuide({ exercise, onNext, onBack }) {
   const guides = {
     pushup: {
       position: "ด้านข้าง (Side View)",
-      icon: "",
-      diagram: " ← ",
       distance: "1.5 - 2 เมตร",
       height: "ระดับเอว (40-60 cm)",
       reason: "AI ต้องเห็นลำตัว-แขน-ขาจากด้านข้าง เพื่อตรวจมุมข้อศอกและความตรงของหลัง",
       checkpoints: ["เห็นหัวจรดเท้า", "เห็นข้อศอกงอชัดเจน", "เห็นลำตัวตรงหรือค่อม"],
-      wrongWays: [" ด้านหน้า: จะเห็นแขนซ้อนกัน วัดมุมไม่ได้", " ใกล้เกินไป: ไม่เห็นเท้า"],
+      wrongWays: ["ด้านหน้า: จะเห็นแขนซ้อนกัน วัดมุมไม่ได้", "ใกล้เกินไป: ไม่เห็นเท้า"],
     },
     squat: {
       position: "เฉียง 45° (Front-Angle View)",
-      icon: "",
-      diagram: " ↙ ",
       distance: "1.5 - 2.5 เมตร",
       height: "ระดับเอว (50-70 cm)",
       reason: "AI ต้องเห็นการย่อตัวและมุมเข่า มองเฉียงจะเห็นทั้งหัวเข่าและลำตัว",
       checkpoints: ["เห็นเข่างอ-ไม่งอ", "เห็นหลังตรงหรือเอน", "เห็นสะโพกลงต่ำกว่าเข่า"],
-      wrongWays: [" ด้านหลัง: ไม่เห็นความลึกของสะโพก", " ไกลเกิน: ย่อตัวแล้วหลุดกรอบ"],
+      wrongWays: ["ด้านหลัง: ไม่เห็นความลึกของสะโพก", "ไกลเกิน: ย่อตัวแล้วหลุดกรอบ"],
     },
     plank: {
       position: "ด้านข้าง (Side View)",
-      icon: "",
-      diagram: " ← ",
       distance: "1.5 - 2 เมตร",
       height: "ระดับเอว (30-50 cm)",
       reason: "AI ต้องเห็นว่าลำตัวตรงหรือย้อย จึงต้องเห็นจากด้านข้าง",
       checkpoints: ["เห็นหัว-ไหล่-สะโพก-เท้า", "เห็นว่ายกตัวขึ้นจากพื้น", "เห็นลำตัวตรงหรือย้อย"],
-      wrongWays: [" ด้านหน้า: ไม่เห็นว่าหลังย้อยหรือไม่", " มุมสูง: ไม่เห็นลำตัวเต็มตัว ตัดหัวหรือเท้าออก"],
+      wrongWays: ["ด้านหน้า: ไม่เห็นว่าหลังย้อยหรือไม่", "มุมสูง: ไม่เห็นลำตัวเต็มตัว ตัดหัวหรือเท้าออก"],
     },
     lunge: {
       position: "เฉียง 45° (Front-Angle View)",
-      icon: "",
-      diagram: " ↙ ",
       distance: "1.5 - 2 เมตร",
       height: "ระดับเอว (50-70 cm)",
       reason: "AI ต้องเห็นการก้าวขาและมุมเข่าทั้ง 2 ข้างชัดเจน",
       checkpoints: ["เห็นเข่าหน้า-หลัง", "เห็นก้าวยาว-สั้นของก้าว", "เห็นลำตัวตั้งตรง"],
-      wrongWays: [" ด้านหลัง: ไม่เห็นมุมเข่าหน้า", " ด้านข้างตรง: เห็นขาซ้อนกัน"],
+      wrongWays: ["ด้านหลัง: ไม่เห็นมุมเข่าหน้า", "ด้านข้างตรง: เห็นขาซ้อนกัน"],
     },
     situp: {
       position: "ด้านข้าง (Side View)",
-      icon: "",
-      diagram: " ← ",
       distance: "1.5 - 2 เมตร",
       height: "ระดับเอว (30-50 cm)",
       reason: "AI ต้องเห็นลำตัวยกขึ้น-ลง จึงต้องเห็นจากด้านข้าง",
       checkpoints: ["เห็นลำตัวยกขึ้น-นอนลง", "เห็นมือที่ศีรษะ", "เห็นเข่างอชัดเจน"],
-      wrongWays: [" ด้านหน้า: จะเห็นแค่หัว ไม่เห็นลำตัว", " มุมสูง: ไม่เห็นลำตัวยกขึ้น"],
+      wrongWays: ["ด้านหน้า: จะเห็นแค่หัว ไม่เห็นลำตัว", "มุมสูง: ไม่เห็นลำตัวยกขึ้น"],
     },
     jumpingjack: {
       position: "ด้านหน้า (Front View)",
-      icon: "",
-      diagram: " ↓ ",
       distance: "2 - 2.5 เมตร",
-      icon: "",
-      diagram: " ← ",
-      distance: "1.5 - 2 เมตร",
-      height: "ระดับเอว (40-60 cm)",
-      reason: "AI ต้องเห็นลำตัว-แขน-ขาจากด้านข้าง เพื่อตรวจมุมข้อศอกและความตรงของหลัง",
-      checkpoints: ["เห็นหัวจรดเท้า", "เห็นข้อศอกงอชัดเจน", "เห็นลำตัวตรงหรือค่อม"],
-      wrongWays: [" ด้านหน้า: จะเห็นแขนซ้อนกัน วัดมุมไม่ได้", " ใกล้เกินไป: ไม่เห็นเท้า"],
+      height: "ระดับเอว (60-80 cm)",
+      reason: "AI ต้องเห็นขา 2 ข้างกางออกและแขน 2 ข้างยกขึ้น เพื่อยืนยันว่าทำท่าครบ",
+      checkpoints: ["เห็นทั้งตัวชัดเจน", "เห็นขากาง-ชิดได้ชัด", "เห็นแขน 2 ข้างยกขึ้น"],
+      wrongWays: ["ด้านข้าง: จะเห็นขาซ้อนกัน วัดการกางไม่ได้", "ใกล้เกิน: กระโดดแล้วหลุดกรอบ"],
     },
-    squat: {
-      position: "เฉียง 45° (Front-Angle View)",
-      icon: "",
-      diagram: " ↙ ",
-      distance: "1.5 - 2.5 เมตร",
-      height: "ระดับเอว (50-70 cm)",
-      reason: "AI ต้องเห็นการย่อตัวและมุมเข่า มองเฉียงจะเห็นทั้งหัวเข่าและลำตัว",
-      checkpoints: ["เห็นเข่างอ-ไม่งอ", "เห็นหลังตรงหรือเอน", "เห็นสะโพกลงต่ำกว่าเข่า"],
-      wrongWays: [" ด้านหลัง: ไม่เห็นความลึกของสะโพก", " ไกลเกิน: ย่อตัวแล้วหลุดกรอบ"],
-    },
-    plank: {
-      position: "ด้านข้าง (Side View)",
-      icon: "",
-      diagram: " ← ",
-      distance: "1.5 - 2 เมตร",
-      height: "ระดับเอว (30-50 cm)",
-      reason: "AI ต้องเห็นว่าลำตัวตรงหรือย้อย จึงต้องเห็นจากด้านข้าง",
-      checkpoints: ["เห็นหัว-ไหล่-สะโพก-เท้า", "เห็นว่ายกตัวขึ้นจากพื้น", "เห็นลำตัวตรงหรือย้อย"],
-      wrongWays: [" ด้านหน้า: ไม่เห็นว่าหลังย้อยหรือไม่", " มุมสูง: ไม่เห็นลำตัวเต็มตัว ตัดหัวหรือเท้าออก"],
-    },
-    lunge: {
-      position: "เฉียง 45° (Front-Angle View)",
-      icon: "",
-      diagram: " ↙ ",
-      distance: "1.5 - 2 เมตร",
-      height: "ระดับเอว (50-70 cm)",
-      reason: "AI ต้องเห็นการก้าวขาและมุมเข่าทั้ง 2 ข้างชัดเจน",
-      checkpoints: ["เห็นเข่าหน้า-หลัง", "เห็นก้าวยาว-สั้นของก้าว", "เห็นลำตัวตั้งตรง"],
-      wrongWays: [" ด้านหลัง: ไม่เห็นมุมเข่าหน้า", " ด้านข้างตรง: เห็นขาซ้อนกัน"],
-    },
-    situp: {
-      position: "ด้านข้าง (Side View)",
-      icon: "",
-      diagram: " ← ",
-      distance: "1.5 - 2 เมตร",
-      height: "ระดับเอว (30-50 cm)",
-      reason: "AI ต้องเห็นลำตัวยกขึ้น-ลง จึงต้องเห็นจากด้านข้าง",
-      checkpoints: ["เห็นลำตัวยกขึ้น-นอนลง", "เห็นมือที่ศีรษะ", "เห็นเข่างอชัดเจน"],
-      wrongWays: [" ด้านหน้า: จะเห็นแค่หัว ไม่เห็นลำตัว", " มุมสูง: ไม่เห็นลำตัวยกขึ้น"],
-    },
-    jumpingjack: {
-      position: "ด้านหน้า (Front View)",
-      icon: "",
-      diagram: " ↓ ",
-      distance: "2 - 2.5 เมตร",
- const names = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE", situp: "SIT-UP", jumpingjack: "JUMPING JACK" };
- const g = guides[exercise] || guides.pushup;
+  };
 
- return (
- <div style={{ maxWidth: "520px", margin: "0 auto", padding: "40px 24px" }}>
- <div style={{ marginBottom: "32px" }}>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#ffd70066", marginBottom: "12px" }}>// CAMERA SETUP GUIDE</div>
- <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,4vw,34px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>SET UP<br /><span style={{ color: "#ffd700" }}>YOUR CAMERA</span></h1>
- <p style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff55", marginTop: "12px", lineHeight: 1.8 }}>
- ตั้งกล้องให้ถูกตำแหน่ง AI จะตรวจจับท่าได้แม่นยำ 100%
- </p>
- </div>
+  const g = guides[exercise] || guides.pushup;
 
- {/* Recommended Position */}
- <div style={{ background: "#0a0a1a", border: "1px solid #ffd70044", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
- <div style={{ background: "#0d0d1f", padding: "12px 16px", borderBottom: "1px solid #ffd70033", fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffd700", letterSpacing: "2px" }}>
- ตำแหน่งที่แนะนำ — {names[exercise]}
- </div>
- <div style={{ padding: "24px", textAlign: "center" }}>
- <div style={{ fontSize: "48px", marginBottom: "16px", letterSpacing: "16px" }}>{g.diagram}</div>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "22px", fontWeight: 700, color: "#ffd700", marginBottom: "8px" }}>{g.position}</div>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff77", lineHeight: 1.8 }}>{g.reason}</div>
- </div>
- <div style={{ display: "flex", gap: "12px", padding: "0 24px 20px", justifyContent: "center" }}>
- {[["", g.distance], ["", g.height]].map(([icon, val]) => (
- <div key={val} style={{ background: "#ffd70011", border: "1px solid #ffd70033", borderRadius: "6px", padding: "10px 16px", textAlign: "center" }}>
- <div style={{ fontSize: "20px", marginBottom: "4px" }}>{icon}</div>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", fontWeight: 700, color: "#ffd700" }}>{val}</div>
- </div>
- ))}
- </div>
- </div>
+  return (
+    <div style={{ maxWidth: "520px", margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ marginBottom: "32px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#ffd70066", marginBottom: "12px" }}>// CAMERA SETUP GUIDE</div>
+        <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,4vw,34px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.15, margin: 0 }}>SET UP<br /><span style={{ color: "#ffd700" }}>YOUR CAMERA</span></h1>
+        <p style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ffffff55", marginTop: "12px", lineHeight: 1.8 }}>
+          {g.reason}
+        </p>
+      </div>
 
- {/* Checkpoints */}
- <div style={{ background: "#0d1a0d", border: "1px solid #00ff8833", borderRadius: "8px", padding: "20px", marginBottom: "16px" }}>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#00ff8899", marginBottom: "12px" }}> AI ต้องเห็นอะไรบ้าง</div>
- {g.checkpoints.map((c, i) => (
- <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
- <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#00ff88", flexShrink: 0 }} />
- <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffffbb" }}>{c}</span>
- </div>
- ))}
- </div>
+      <div style={{ background: "#111318", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "20px", marginBottom: "24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+          <div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffd70088", letterSpacing: "1px", marginBottom: "4px" }}>POSITION</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "13px", fontWeight: 700, color: "#ffd700" }}>{g.position}</div>
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "9px", color: "#ffd70088", letterSpacing: "1px", marginBottom: "4px" }}>DISTANCE</div>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "13px", fontWeight: 700, color: "#ffd700" }}>{g.distance}</div>
+          </div>
+        </div>
+      </div>
 
- {/* Wrong positions */}
- <div style={{ background: "#1a0d0d", border: "1px solid #ff336633", borderRadius: "8px", padding: "20px", marginBottom: "24px" }}>
- <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#ff336699", marginBottom: "12px" }}> ตำแหน่งที่ไม่ควรใช้</div>
- {g.wrongWays.map((w, i) => (
- <div key={i} style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ff668899", marginBottom: "6px", lineHeight: 1.6 }}>{w}</div>
- ))}
- </div>
+      {/* Checkpoints */}
+      <div style={{ background: "#0d1a0d", border: "1px solid #00ff8833", borderRadius: "8px", padding: "20px", marginBottom: "16px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#00ff8899", marginBottom: "12px" }}> AI ต้องเห็นอะไรบ้าง</div>
+        {g.checkpoints.map((c, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#00ff88", flexShrink: 0 }} />
+            <span style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", color: "#ffffffbb" }}>{c}</span>
+          </div>
+        ))}
+      </div>
 
- <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
- <GlowButton onClick={onNext} style={{ width: "100%" }}> ตั้งกล้องเรียบร้อย →</GlowButton>
- <GlowButton variant="ghost" onClick={onBack} style={{ width: "100%", opacity: 0.5 }}>← กลับ</GlowButton>
- </div>
- </div>
- );
+      {/* Wrong positions */}
+      <div style={{ background: "#1a0d0d", border: "1px solid #ff336633", borderRadius: "8px", padding: "20px", marginBottom: "24px" }}>
+        <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "2px", color: "#ff336699", marginBottom: "12px" }}> ตำแหน่งที่ไม่ควรใช้</div>
+        {g.wrongWays.map((w, i) => (
+          <div key={i} style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#ff668899", marginBottom: "6px", lineHeight: 1.6 }}>{w}</div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <GlowButton onClick={onNext} style={{ width: "100%" }}> ตั้งกล้องเรียบร้อย →</GlowButton>
+        <GlowButton variant="ghost" onClick={onBack} style={{ width: "100%", opacity: 0.5 }}>← กลับ</GlowButton>
+      </div>
+    </div>
+  );
 }
 
 
@@ -1718,3 +1638,4 @@ export default function AdaptableShadow() {
  </>
  );
 }
+

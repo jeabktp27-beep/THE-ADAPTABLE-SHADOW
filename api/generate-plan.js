@@ -21,21 +21,24 @@ export default async function handler(req, res) {
 บริบท: เหนื่อยล้า ${ctx.fatigue}/9, สถานที่="${ctx.location}", อากาศ="${ctx.weather}"
 
 กฎสำคัญที่สุด — ห้ามฝ่าฝืน:
-- ผู้ใช้กำหนดไว้แล้วว่า sets=${sets} และ reps=${reps} ทุกท่าที่นับ reps ต้องใช้ค่านี้เท่านั้น ห้ามเปลี่ยนโดยเด็ดขาด!
-- plank ใช้ sets=${sets} hold_sec ตามสมควร (15-60 วินาที)
+- ผู้ใช้กำหนดไว้แล้วว่า sets=${sets} และ reps=${reps} สำหรับท่าที่เลือก
+- คุณต้องเลือกท่าที่เหมาะสมกับ "เป้าหมาย" และ "บริบท" ของผู้ใช้มากที่สุด (ไม่จำเป็นต้องครบทุกท่า)
+- หากเป้าหมายระบุเจาะจง เช่น "เน้นขา" ให้เลือกเฉพาะท่าที่เกี่ยวข้อง (เช่น squat, lunge, jumpingjack)
+- สำหรับท่าที่ไม่เลือก ให้กำหนดค่า sets: 0
+- plank ใช้ sets=${sets} หรือ 0, hold_sec ตามสมควร (15-60 วินาที)
 - rest_sec ปรับได้ตามความเหมาะสม (20-90 วินาที)
 - เลือก mode จากจำนวน sets: sets>=3 → "full", sets=2 → "moderate", sets=1 → "micro"
 - เป้าหมายผู้ใช้: ปรับสารใน message/motivation ให้ตรงกับเป้าหมายนี้
 
-ท่าออกกำลัง: pushup(นับ reps), squat(นับ reps), plank(นับวินาที hold_sec), lunge(นับ reps), situp(นับ reps), jumpingjack(นับ reps)
+ท่าออกกำลังที่มีให้เลือก: pushup, squat, plank, lunge, situp, jumpingjack
 ตอบ JSON เท่านั้น ห้ามมี markdown backtick:
 {"mode":"moderate","message":"ข้อความ trainer 1-2 ประโยคภาษาไทย","motivation":"ประโยคกระตุ้นใจ","pushup":{"sets":${sets},"reps":${reps},"rest_sec":45},"squat":{"sets":${sets},"reps":${reps},"rest_sec":45},"plank":{"sets":${sets},"hold_sec":30,"rest_sec":30},"lunge":{"sets":${sets},"reps":${reps},"rest_sec":45},"situp":{"sets":${sets},"reps":${reps},"rest_sec":45},"jumpingjack":{"sets":${sets},"reps":${reps},"rest_sec":30},"form_tip":"เคล็ดลับ form 1 ข้อ","estimated_duration_min":8}`;
 
   // ดึง API Key จาก Environment Variables ของ Vercel
-  const GROQ_KEY = process.env.GROQ_API_KEY;
+  const GEMINI_KEY = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY;
 
-  if (!GROQ_KEY) {
-    console.error("Missing GROQ_API_KEY in Environment Variables");
+  if (!GEMINI_KEY) {
+    console.error("Missing API Key in Environment Variables");
     return res.status(500).json({ message: "⚠️ ระบบยังไม่ได้ตั้งค่า API Key กรุณาแจ้งผู้ดูแลระบบ" });
   }
 
@@ -47,22 +50,24 @@ export default async function handler(req, res) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       // ============================================================
-      // เรียก Groq API (OpenAI-compatible format)
+      // เรียก Gemini API (Google AI)
       // ============================================================
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${GROQ_KEY}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            { role: "system", content: "คุณคือ AI Personal Trainer ตอบกลับเป็น JSON เท่านั้น ห้ามมี markdown" },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 1024
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+            responseMimeType: "application/json"
+          }
         })
       });
 
@@ -77,14 +82,14 @@ export default async function handler(req, res) {
       // ถ้า Error อื่น
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Groq API Error:", response.status, errorText);
+        console.error("Gemini API Error:", response.status, errorText);
         const friendlyMsg = getFriendlyErrorMessage(response.status, errorText);
         return res.status(response.status).json({ message: friendlyMsg });
       }
 
-      // สำเร็จ! ดึง JSON จาก Groq response
+      // สำเร็จ! ดึง JSON จาก Gemini response
       const data = await response.json();
-      const text = data.choices?.[0]?.message?.content || "{}";
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) {
