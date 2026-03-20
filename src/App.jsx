@@ -436,13 +436,13 @@ function PagePlan({ plan, onStart, onStartGuided, onBack, onHistory, onDashboard
  };
 
  const exercises = [
- { key: "pushup", label: "Push-up", img: "/exercises/pushup.png", stat: `${plan.pushup?.sets}×${plan.pushup?.reps}`, sub: `พัก ${plan.pushup?.rest_sec}วิ`, accent: "#00ff88" },
- { key: "squat", label: "Squat", img: "/exercises/squat.png", stat: `${plan.squat?.sets}×${plan.squat?.reps}`, sub: `พัก ${plan.squat?.rest_sec}วิ`, accent: "#00bfff" },
- { key: "plank", label: "Plank", img: "/exercises/plank.png", stat: `${plan.plank?.sets}×${plan.plank?.hold_sec}s`, sub: `พัก ${plan.plank?.rest_sec}วิ`, accent: "#ffd700" },
- { key: "lunge", label: "Lunge", img: "/exercises/lunge.png", stat: `${plan.lunge?.sets}×${plan.lunge?.reps}`, sub: `พัก ${plan.lunge?.rest_sec}วิ`, accent: "#ff6633" },
- { key: "situp", label: "Sit-up", img: "/exercises/situp.png", stat: `${plan.situp?.sets}×${plan.situp?.reps}`, sub: `พัก ${plan.situp?.rest_sec}วิ`, accent: "#a855f7" },
- { key: "jumpingjack", label: "Jumping Jack", img: "/exercises/jumpingjack.png", stat: `${plan.jumpingjack?.sets}×${plan.jumpingjack?.reps}`, sub: `พัก ${plan.jumpingjack?.rest_sec}วิ`, accent: "#ff3366" },
- ].filter(ex => plan[ex.key] && plan[ex.key].sets > 0);
+ { key: "pushup", label: "Push-up", img: "/exercises/pushup.png", stat: `${plan.pushup?.sets ?? 0}×${plan.pushup?.reps ?? 0}`, sub: `พัก ${plan.pushup?.rest_sec ?? 0}วิ`, accent: "#00ff88" },
+ { key: "squat", label: "Squat", img: "/exercises/squat.png", stat: `${plan.squat?.sets ?? 0}×${plan.squat?.reps ?? 0}`, sub: `พัก ${plan.squat?.rest_sec ?? 0}วิ`, accent: "#00bfff" },
+ { key: "plank", label: "Plank", img: "/exercises/plank.png", stat: `${plan.plank?.sets ?? 0}×${plan.plank?.hold_sec ?? 0}s`, sub: `พัก ${plan.plank?.rest_sec ?? 0}วิ`, accent: "#ffd700" },
+ { key: "lunge", label: "Lunge", img: "/exercises/lunge.png", stat: `${plan.lunge?.sets ?? 0}×${plan.lunge?.reps ?? 0}`, sub: `พัก ${plan.lunge?.rest_sec ?? 0}วิ`, accent: "#ff6633" },
+ { key: "situp", label: "Sit-up", img: "/exercises/situp.png", stat: `${plan.situp?.sets ?? 0}×${plan.situp?.reps ?? 0}`, sub: `พัก ${plan.situp?.rest_sec ?? 0}วิ`, accent: "#a855f7" },
+ { key: "jumpingjack", label: "Jumping Jack", img: "/exercises/jumpingjack.png", stat: `${plan.jumpingjack?.sets ?? 0}×${plan.jumpingjack?.reps ?? 0}`, sub: `พัก ${plan.jumpingjack?.rest_sec ?? 0}วิ`, accent: "#ff3366" },
+ ].filter(ex => plan[ex.key] && (plan[ex.key].sets ?? 0) > 0);
 
  return (
  <div style={{ maxWidth: "520px", margin: "0 auto", padding: "32px 20px" }}>
