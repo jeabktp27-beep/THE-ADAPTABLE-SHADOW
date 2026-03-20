@@ -791,13 +791,58 @@ function PageSummary({ result, stats, onPlayAgain, onBack }) {
 // [หน้า H] หน้าประวัติการออกกำลัง
 function PageHistory({ onBack, stats }) {
  const [history, setHistory] = useState(() => loadLS(LS_HISTORY, []));
- const icons = { pushup: "", squat: "", plank: "", lunge: "", situp: "", jumpingjack: "" };
+ const [search, setSearch] = useState("");
+ const [dateFilter, setDateFilter] = useState("all"); // all, today, week, month
+ const icons = { pushup: "💪", squat: "🦵", plank: "🧘", lunge: "🚶", situp: "🤸", jumpingjack: "🏃" };
  const names = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE", situp: "SIT-UP", jumpingjack: "JUMPING JACK" };
 
- const clearHistory = () => { saveLS(LS_HISTORY, []); setHistory([]); };
+ const clearHistory = () => { if(window.confirm("คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติทั้งหมด?")) { saveLS(LS_HISTORY, []); setHistory([]); } };
 
- const totalCal = history.reduce((s, h) => s + (h.calories || 0), 0);
- const totalSessions = history.length;
+ // กรองข้อมูล
+ const filteredHistory = history.filter(h => {
+   const d = new Date(h.id);
+   const now = new Date();
+   const isMatchSearch = (names[h.exercise] || "").toLowerCase().includes(search.toLowerCase()) || 
+                        (h.exercise || "").toLowerCase().includes(search.toLowerCase());
+   
+   if (dateFilter === "today") {
+     return isMatchSearch && d.toDateString() === now.toDateString();
+   } else if (dateFilter === "week") {
+     const weekAgo = new Date(); weekAgo.setDate(now.getDate() - 7);
+     return isMatchSearch && d >= weekAgo;
+   } else if (dateFilter === "month") {
+     const monthAgo = new Date(); monthAgo.setMonth(now.getMonth() - 1);
+     return isMatchSearch && d >= monthAgo;
+   }
+   return isMatchSearch;
+ }).sort((a, b) => b.id - a.id);
+
+ const totalCal = filteredHistory.reduce((s, h) => s + (h.calories || 0), 0);
+ const totalSessions = filteredHistory.length;
+
+ // ฟังก์ชันส่งออก CSV
+ const exportCSV = () => {
+   const headers = ["ID", "Date", "Exercise", "Sets", "Target", "Elapsed(s)", "Calories(kcal)"];
+   const rows = history.map(h => [
+     h.id,
+     new Date(h.id).toISOString(),
+     names[h.exercise] || h.exercise,
+     h.sets,
+     h.exercise === "plank" ? `${h.exPlan?.hold_sec}s` : h.exPlan?.reps,
+     h.elapsed,
+     h.calories
+   ]);
+   const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+   const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+   const url = URL.createObjectURL(blob);
+   const link = document.createElement("a");
+   link.setAttribute("href", url);
+   link.setAttribute("download", `shadow_history_${new Date().toISOString().slice(0, 10)}.csv`);
+   link.style.visibility = 'hidden';
+   document.body.appendChild(link);
+   link.click();
+   document.body.removeChild(link);
+ };
 
  return (
  <div style={{ maxWidth: "520px", margin: "0 auto", padding: "40px 24px" }}>
@@ -805,6 +850,29 @@ function PageHistory({ onBack, stats }) {
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#00bfff66", marginBottom: "12px" }}>// WORKOUT HISTORY</div>
  <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,4vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.2, margin: 0 }}>YOUR<br /><span style={{ color: "#00bfff" }}>JOURNEY</span></h1>
  </div>
+
+ {/* Filters & Search */}
+ <div style={{ marginBottom: "24px", display: "flex", flexDirection: "column", gap: "12px" }}>
+   <input 
+     type="text" 
+     placeholder="ค้นหาท่าออกกำลังกาย..." 
+     value={search}
+     onChange={e => setSearch(e.target.value)}
+     style={{ width: "100%", background: "#0d1a0d", border: "1px solid #00bfff33", borderRadius: "8px", padding: "12px 16px", color: "#fff", fontFamily: "'Space Mono',monospace", fontSize: "13px", outline: "none" }}
+   />
+   <div style={{ display: "flex", gap: "8px" }}>
+     {[["all", "ทั้งหมด"], ["today", "วันนี้"], ["week", "สัปดาห์นี้"], ["month", "เดือนนี้"]].map(([val, label]) => (
+       <button 
+         key={val}
+         onClick={() => setDateFilter(val)}
+         style={{ flex: 1, padding: "8px", background: dateFilter === val ? "#00bfff" : "#0d1a0d", border: "1px solid #00bfff33", borderRadius: "4px", color: dateFilter === val ? "#060810" : "#00bfff", fontFamily: "'Space Mono',monospace", fontSize: "10px", fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
+       >
+         {label}
+       </button>
+     ))}
+   </div>
+ </div>
+
  {/* Summary row */}
  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
  {[[" SESSIONS", totalSessions], [" TOTAL KCAL", totalCal]].map(([k, v]) => (
@@ -814,14 +882,15 @@ function PageHistory({ onBack, stats }) {
  </div>
  ))}
  </div>
- {history.length === 0 ? (
+
+ {filteredHistory.length === 0 ? (
  <div style={{ textAlign: "center", padding: "60px 24px", color: "#ffffff33", fontFamily: "'Space Mono',monospace", fontSize: "13px", lineHeight: 2 }}>
- <div style={{ fontSize: "48px", marginBottom: "16px" }}></div>
- ยังไม่มีประวัติการออกกำลัง<br />เริ่มออกกำลังแล้วจะบันทึกที่นี่
+ <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔍</div>
+ ไม่พบประวัติการออกกำลังที่ค้นหา
  </div>
  ) : (
  <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
- {history.map((h) => {
+ {filteredHistory.map((h) => {
  const d = new Date(h.id);
  const dateStr = d.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
  const timeStr = d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
@@ -830,7 +899,7 @@ function PageHistory({ onBack, stats }) {
  const m = Math.floor(elapsed / 60), s = elapsed % 60;
  return (
  <div key={h.id} style={{ background: "#0d1a0d", border: "1px solid #00bfff22", borderRadius: "8px", padding: "16px", display: "flex", alignItems: "center", gap: "16px" }}>
- <div style={{ fontSize: "28px", flexShrink: 0 }}>{icons[h.exercise] || ""}</div>
+ <div style={{ fontSize: "28px", flexShrink: 0 }}>{icons[h.exercise] || "🏋️"}</div>
  <div style={{ flex: 1, minWidth: 0 }}>
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "12px", fontWeight: 700, color: "#00bfff" }}>{names[h.exercise] || h.exercise?.toUpperCase()}</div>
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "10px", color: "#ffffff55", marginTop: "3px" }}>
@@ -846,13 +915,16 @@ function PageHistory({ onBack, stats }) {
  })}
  </div>
  )}
+
  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
  <div style={{ display: "flex", gap: "10px" }}>
  <GlowButton variant="ghost" onClick={onBack} style={{ flex: 1 }}>← กลับ</GlowButton>
  {history.length > 0 && <GlowButton variant="danger" onClick={clearHistory} style={{ flex: 1 }}> ล้างประวัติ</GlowButton>}
  </div>
+ <GlowButton onClick={exportCSV} style={{ width: "100%", background: "linear-gradient(135deg, #00bfff, #0088ff)" }}> ส่งออกข้อมูลเป็น CSV (.csv)</GlowButton>
+ 
  {/* Export / Import */}
- <div style={{ display: "flex", gap: "10px" }}>
+ <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
  <button
  onClick={() => {
  const data = { stats, history: loadLS(LS_HISTORY, []), ctx: loadLS(LS_CTX, {}) };
@@ -863,12 +935,12 @@ function PageHistory({ onBack, stats }) {
  }}
  style={{ flex: 1, padding: "12px", background: "#0d1a0d", border: "1px solid #00ff8844", borderRadius: "4px", color: "#00ff88", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, cursor: "pointer", letterSpacing: "1px" }}
  >
- EXPORT ข้อมูล
+ EXPORT สำรองข้อมูล
  </button>
  <label
  style={{ flex: 1, padding: "12px", background: "#0d1a0d", border: "1px solid #00bfff44", borderRadius: "4px", color: "#00bfff", fontFamily: "'Space Mono',monospace", fontSize: "11px", fontWeight: 700, cursor: "pointer", letterSpacing: "1px", textAlign: "center" }}
  >
- IMPORT ข้อมูล
+ IMPORT กู้คืนข้อมูล
  <input type="file" accept=".json" style={{ display: "none" }} onChange={e => {
  const file = e.target.files?.[0];
  if (!file) return;
@@ -898,27 +970,37 @@ function PageHistory({ onBack, stats }) {
 // [หน้า D] Dashboard สรุปสถิติ + กราฟรายสัปดาห์
 function PageDashboard({ onBack }) {
  const canvasRef = useRef(null);
- const history = loadLS(LS_HISTORY, []);
+ const [history] = useState(() => loadLS(LS_HISTORY, []));
+ const [viewMode, setViewMode] = useState("week"); // week, month
+ 
+ // สถิติรวม
  const totalCal = history.reduce((s, h) => s + (h.calories || 0), 0);
  const totalSessions = history.length;
+ const totalTime = history.reduce((s, h) => s + (h.elapsed || 0), 0);
 
- // Last 7 days
- const days = [];
- for (let i = 6; i >= 0; i--) {
- const d = new Date(); d.setDate(d.getDate() - i);
- const key = d.toISOString().slice(0, 10);
- const label = d.toLocaleDateString("th-TH", { weekday: "short" });
- const sessions = history.filter(h => new Date(h.id).toISOString().slice(0, 10) === key);
- days.push({ label, cal: sessions.reduce((s, h) => s + (h.calories || 0), 0), count: sessions.length });
- }
+ // ข้อมูลตามช่วงเวลา
+ const getChartData = () => {
+   const days = [];
+   const count = viewMode === "week" ? 7 : 30;
+   for (let i = count - 1; i >= 0; i--) {
+     const d = new Date(); d.setDate(d.getDate() - i);
+     const key = d.toISOString().slice(0, 10);
+     const label = viewMode === "week" ? d.toLocaleDateString("th-TH", { weekday: "short" }) : d.getDate();
+     const sessions = history.filter(h => new Date(h.id).toISOString().slice(0, 10) === key);
+     days.push({ label, cal: sessions.reduce((s, h) => s + (h.calories || 0), 0), count: sessions.length });
+   }
+   return days;
+ };
+
+ const days = getChartData();
  const maxCal = Math.max(...days.map(d => d.cal), 1);
 
  // Streak
  let streak = 0;
  for (let i = 0; i < 30; i++) {
- const d = new Date(); d.setDate(d.getDate() - i);
- const key = d.toISOString().slice(0, 10);
- if (history.some(h => new Date(h.id).toISOString().slice(0, 10) === key)) streak++; else break;
+   const d = new Date(); d.setDate(d.getDate() - i);
+   const key = d.toISOString().slice(0, 10);
+   if (history.some(h => new Date(h.id).toISOString().slice(0, 10) === key)) streak++; else break;
  }
 
  // Exercise breakdown
@@ -928,32 +1010,40 @@ function PageDashboard({ onBack }) {
  const exColors = { pushup: "#00ff88", squat: "#00bfff", plank: "#ffd700", lunge: "#ff9800", situp: "#a855f7", jumpingjack: "#ff3366" };
 
  useEffect(() => {
- const canvas = canvasRef.current;
- if (!canvas) return;
- const ctx = canvas.getContext("2d");
- const W = canvas.width, H = canvas.height;
- ctx.clearRect(0, 0, W, H);
- ctx.fillStyle = "#0d1a0d"; ctx.fillRect(0, 0, W, H);
- // Grid
- ctx.strokeStyle = "#00ff8811"; ctx.lineWidth = 1;
- for (let i = 0; i < 5; i++) { const y = 30 + (i * (H - 70)) / 4; ctx.beginPath(); ctx.moveTo(50, y); ctx.lineTo(W - 20, y); ctx.stroke(); }
- // Bars
- const barW = (W - 90) / 7 - 8;
- days.forEach((d, i) => {
- const x = 60 + i * ((W - 90) / 7);
- const barH = d.cal > 0 ? (d.cal / maxCal) * (H - 90) : 0;
- const y = H - 50 - barH;
- const grad = ctx.createLinearGradient(x, y, x, H - 50);
- grad.addColorStop(0, "#00ff88"); grad.addColorStop(1, "#00ff8833");
- ctx.fillStyle = grad; ctx.fillRect(x, y, barW, barH);
- ctx.shadowColor = "#00ff88"; ctx.shadowBlur = d.cal > 0 ? 6 : 0;
- ctx.fillRect(x, y, barW, 2); ctx.shadowBlur = 0;
- if (d.cal > 0) { ctx.fillStyle = "#00ff88"; ctx.font = "bold 10px 'Space Mono',monospace"; ctx.textAlign = "center"; ctx.fillText(`${d.cal}`, x + barW / 2, y - 6); }
- ctx.fillStyle = "#ffffff55"; ctx.font = "10px 'Space Mono',monospace"; ctx.textAlign = "center"; ctx.fillText(d.label, x + barW / 2, H - 28);
- if (d.count > 0) { ctx.fillStyle = "#ffd700"; ctx.font = "9px 'Space Mono',monospace"; ctx.fillText(`${d.count}x`, x + barW / 2, H - 14); }
- });
- ctx.fillStyle = "#ffffff33"; ctx.font = "9px 'Space Mono',monospace"; ctx.textAlign = "right"; ctx.fillText("kcal", 45, 25);
- }, []);
+   const canvas = canvasRef.current;
+   if (!canvas) return;
+   const ctx = canvas.getContext("2d");
+   const W = canvas.width, H = canvas.height;
+   ctx.clearRect(0, 0, W, H);
+   ctx.fillStyle = "#0d1a0d"; ctx.fillRect(0, 0, W, H);
+   
+   // Grid
+   ctx.strokeStyle = "#00ff8811"; ctx.lineWidth = 1;
+   for (let i = 0; i < 5; i++) { const y = 30 + (i * (H - 70)) / 4; ctx.beginPath(); ctx.moveTo(50, y); ctx.lineTo(W - 20, y); ctx.stroke(); }
+   
+   // Bars
+   const barGap = viewMode === "week" ? 8 : 2;
+   const barW = (W - 90) / days.length - barGap;
+   days.forEach((d, i) => {
+     const x = 60 + i * ((W - 90) / days.length);
+     const barH = d.cal > 0 ? (d.cal / maxCal) * (H - 90) : 0;
+     const y = H - 50 - barH;
+     const grad = ctx.createLinearGradient(x, y, x, H - 50);
+     grad.addColorStop(0, "#00ff88"); grad.addColorStop(1, "#00ff8833");
+     ctx.fillStyle = grad; ctx.fillRect(x, y, barW, barH);
+     ctx.shadowColor = "#00ff88"; ctx.shadowBlur = d.cal > 0 ? 6 : 0;
+     ctx.fillRect(x, y, barW, 2); ctx.shadowBlur = 0;
+     
+     if (viewMode === "week" && d.cal > 0) { 
+       ctx.fillStyle = "#00ff88"; ctx.font = "bold 10px 'Space Mono',monospace"; ctx.textAlign = "center"; ctx.fillText(`${d.cal}`, x + barW / 2, y - 6); 
+     }
+     
+     if (i % (viewMode === "week" ? 1 : 5) === 0) {
+       ctx.fillStyle = "#ffffff55"; ctx.font = "10px 'Space Mono',monospace"; ctx.textAlign = "center"; ctx.fillText(d.label, x + barW / 2, H - 28);
+     }
+   });
+   ctx.fillStyle = "#ffffff33"; ctx.font = "9px 'Space Mono',monospace"; ctx.textAlign = "right"; ctx.fillText("kcal", 45, 25);
+ }, [days, maxCal, viewMode]);
 
  return (
  <div style={{ maxWidth: "520px", margin: "0 auto", padding: "40px 24px" }}>
@@ -961,9 +1051,10 @@ function PageDashboard({ onBack }) {
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", letterSpacing: "4px", color: "#a855f766", marginBottom: "12px" }}>// DASHBOARD</div>
  <h1 style={{ fontFamily: "'Space Mono',monospace", fontSize: "clamp(24px,4vw,36px)", fontWeight: 700, color: "#ffffff", lineHeight: 1.2, margin: 0 }}>YOUR<br /><span style={{ color: "#a855f7" }}>PROGRESS</span></h1>
  </div>
+
  {/* Summary cards */}
  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "24px" }}>
- {[["", totalSessions, "SESSIONS"], ["", totalCal, "TOTAL KCAL"], ["", streak, "DAY STREAK"]].map(([icon, val, label]) => (
+ {[["🔥", totalCal, "KCAL"], ["⏱️", Math.round(totalTime / 60), "MINS"], ["⚡", streak, "STREAK"]].map(([icon, val, label]) => (
  <div key={label} style={{ background: "#0d1a0d", border: "1px solid #a855f722", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
  <div style={{ fontSize: "20px", marginBottom: "6px" }}>{icon}</div>
  <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "22px", fontWeight: 700, color: "#a855f7" }}>{val}</div>
@@ -971,11 +1062,20 @@ function PageDashboard({ onBack }) {
  </div>
  ))}
  </div>
- {/* Weekly chart */}
+
+ {/* Chart Container */}
  <div style={{ background: "#0d1a0d", border: "1px solid #a855f722", borderRadius: "8px", overflow: "hidden", marginBottom: "24px" }}>
- <div style={{ background: "#060810", padding: "12px", borderBottom: "1px solid #a855f722", fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#a855f7", letterSpacing: "2px" }}> WEEKLY CALORIES</div>
- <canvas ref={canvasRef} width={520} height={260} style={{ width: "100%", height: "auto", display: "block" }} />
+   <div style={{ background: "#060810", padding: "12px 20px", borderBottom: "1px solid #a855f722", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+     <div style={{ fontFamily: "'Space Mono',monospace", fontSize: "11px", color: "#a855f7", letterSpacing: "2px" }}>WEEKLY CALORIES</div>
+     <div style={{ display: "flex", gap: "4px" }}>
+       {[["week", "7D"], ["month", "30D"]].map(([v, l]) => (
+         <button key={v} onClick={() => setViewMode(v)} style={{ padding: "4px 8px", background: viewMode === v ? "#a855f7" : "transparent", border: "1px solid #a855f744", borderRadius: "4px", color: viewMode === v ? "#060810" : "#a855f7", fontSize: "9px", fontWeight: 700, cursor: "pointer" }}>{l}</button>
+       ))}
+     </div>
+   </div>
+   <canvas ref={canvasRef} width={520} height={260} style={{ width: "100%", height: "auto", display: "block" }} />
  </div>
+
  {/* Exercise breakdown */}
  {Object.keys(exCount).length > 0 && (
  <div style={{ background: "#0d1a0d", border: "1px solid #a855f722", borderRadius: "8px", padding: "20px", marginBottom: "24px" }}>
@@ -1220,7 +1320,10 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  const [feedback, setFeedback] = useState("ตั้งตัวให้กล้องมองเห็น");
  const [isResting, setIsResting] = useState(false), [restCountdown, setRestCountdown] = useState(0);
  const [cameraErr, setCameraErr] = useState(null), [done, setDone] = useState(false);
- const [startTime] = useState(Date.now()), [elapsed, setElapsed] = useState(0);
+ const [startTime] = useState(Date.now());
+ const [elapsed, setElapsed] = useState(0);
+ const lastRepTimeRef = useRef(0); // ป้องกันการนับซ้ำซ้อน
+ const DEBOUNCE_TIME = 3500; // 3.5 วินาที
  const exPlan = plan[exercise];
  const isPlank = exercise === "plank";
  const exNames = { pushup: "PUSH-UP", squat: "SQUAT", plank: "PLANK", lunge: "LUNGE", situp: "SIT-UP", jumpingjack: "JUMPING JACK" };
@@ -1290,11 +1393,16 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  if (ang < 70 && stageRef.current === "up" && Date.now() - lastCountTimeRef.current > 500) {
  stageRef.current = "down";
  lastCountTimeRef.current = Date.now();
+ // DEBOUNCE: ตรวจสอบว่าผ่านไป 3.5 วินาทีหรือยังตั้งแต่ครั้งล่าสุด
+ const now = Date.now();
+ if (now - lastRepTimeRef.current > DEBOUNCE_TIME) {
+ lastRepTimeRef.current = now;
  if (ok) {
  counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
  } else {
  badFormCounterRef.current += 1;
  if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+ }
  }
  if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
  }
@@ -1317,11 +1425,16 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  if (ang < 90 && stageRef.current === "up" && Date.now() - lastCountTimeRef.current > 500) {
  stageRef.current = "down";
  lastCountTimeRef.current = Date.now();
+ // DEBOUNCE: ตรวจสอบว่าผ่านไป 3.5 วินาทีหรือยังตั้งแต่ครั้งล่าสุด
+ const now = Date.now();
+ if (now - lastRepTimeRef.current > DEBOUNCE_TIME) {
+ lastRepTimeRef.current = now;
  if (ok) {
  counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
  } else {
  badFormCounterRef.current += 1;
  if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+ }
  }
  if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
  }
@@ -1339,11 +1452,16 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  if (ang < 70 && stageRef.current === "down" && Date.now() - lastCountTimeRef.current > 500) {
  stageRef.current = "up";
  lastCountTimeRef.current = Date.now();
+ // DEBOUNCE: ตรวจสอบว่าผ่านไป 3.5 วินาทีหรือยังตั้งแต่ครั้งล่าสุด
+ const now = Date.now();
+ if (now - lastRepTimeRef.current > DEBOUNCE_TIME) {
+ lastRepTimeRef.current = now;
  if (ok) {
  counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
  } else {
  badFormCounterRef.current += 1;
  if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+ }
  }
  if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
  }
@@ -1369,11 +1487,16 @@ function PageTracker({ exercise, plan, onFinish, onDone, mediapipeReady, initial
  if (ang > 140 && stageRef.current === "down" && Date.now() - lastCountTimeRef.current > 500) {
  stageRef.current = "up";
  lastCountTimeRef.current = Date.now();
+ // DEBOUNCE: ตรวจสอบว่าผ่านไป 3.5 วินาทีหรือยังตั้งแต่ครั้งล่าสุด
+ const now = Date.now();
+ if (now - lastRepTimeRef.current > DEBOUNCE_TIME) {
+ lastRepTimeRef.current = now;
  if (ok) {
  counterRef.current += 1; setCounter(counterRef.current); Sound.rep();
  } else {
  badFormCounterRef.current += 1;
  if (badFormCounterRef.current >= 2) { badFormCounterRef.current = 0; counterRef.current += 1; setCounter(counterRef.current); Sound.rep(); }
+ }
  }
  if (counterRef.current >= exPlan.reps) { if (setNumRef.current < exPlan.sets) startRest(); else finishSet(); }
  }
